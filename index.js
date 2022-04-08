@@ -1,5 +1,5 @@
 let currentTime = document.querySelectorAll('.hour');
-let colorChange = document.querySelectorAll('input');
+let colorChange = document.querySelectorAll('textarea');
 let change0 = document.querySelector('.change0');
 let change1 = document.querySelector('.change1');
 let change2 = document.querySelector('.change2');
