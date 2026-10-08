@@ -6,6 +6,8 @@ import { CATEGORIES, PRIORITY_LABEL, REPEAT_LABEL, type Priority, type Repeat } 
 import { formatDuration, formatTime, monthDay, relativeDayName, diffDays } from '../lib/time';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
+import { splitBrainDump } from '../lib/brainDump';
+import { dictate, voiceAvailable } from '../native/voice';
 
 const EXAMPLES = ['Gym 6pm 45m #health', 'Deep work 9-11:30 !!', 'Dentist fri 3pm', 'Standup 9:30 15m every weekday', 'Call mom tomorrow', 'Taxes by oct 15 2h !!!'];
 
@@ -24,12 +26,36 @@ function QuickAddForm() {
   const [text, setText] = useState('');
   const [keepOpen, setKeepOpen] = useState(false);
   const p = useMemo(() => parseQuickAdd(text, today), [text, today]);
+  const items = useMemo(() => splitBrainDump(text), [text]);
+  const multi = items.length > 1;
+  const [listening, setListening] = useState(false);
   const { use24h } = data.settings;
   const scheduled = p.start !== null;
 
   const dayName = (d: string) => (Math.abs(diffDays(d, today)) <= 1 ? relativeDayName(d, today) : `${relativeDayName(d, today)}, ${monthDay(d)}`);
 
+  const listen = async () => {
+    setListening(true);
+    try {
+      const heard = await dictate('Say one or more things. “then” starts a new one.');
+      if (heard) setText((t) => (t.trim() ? `${t.trim()}\n${heard}` : heard));
+    } catch {
+      toast('Voice input isn’t available here.', { tone: 'error' });
+    } finally {
+      setListening(false);
+    }
+  };
+
   const submit = (stay: boolean) => {
+    if (multi) {
+      const added = items.map((it) => addFromText(it)).filter(Boolean);
+      if (!added.length) return;
+      const timed = added.filter((t) => t!.start !== null).length;
+      toast(`Added ${added.length} tasks${timed ? ` · ${timed} on the timeline` : ''}`, { action: { label: 'Undo', run: () => added.forEach(() => undo()) } });
+      setText('');
+      if (!stay && !keepOpen) setPanel(null);
+      return;
+    }
     const task = addFromText(text);
     if (!task) return;
     const where = task.start !== null ? `${dayName(task.date!)} at ${formatTime(task.start, use24h)}` : 'Inbox';
@@ -50,15 +76,21 @@ function QuickAddForm() {
     >
       <div className="qa-input-row">
         <Icon name="plus" size={20} className="qa-icon" />
-        <input
+        <textarea
           autoFocus
+          rows={1}
           className="qa-input"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            e.target.style.height = 'auto';
+            e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            // Enter adds; Shift+Enter starts another task (brain dump); Ctrl/⌘+Enter adds and stays.
+            if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
-              submit(true);
+              submit(e.metaKey || e.ctrlKey);
             }
           }}
           placeholder="What’s next?  Try “Lunch with Mia 12:30 1h”"
@@ -69,10 +101,33 @@ function QuickAddForm() {
           autoComplete="off"
           spellCheck={false}
         />
+        {voiceAvailable() && (
+          <button type="button" className={`icon-btn qa-mic${listening ? ' is-on' : ''}`} onClick={() => void listen()} aria-label="Speak tasks" aria-pressed={listening} disabled={listening}>
+            <Icon name="mic" size={18} />
+          </button>
+        )}
       </div>
 
       <div id="qa-preview" className="qa-preview" aria-live="polite">
-        {text.trim() ? (
+        {multi ? (
+          <div className="qa-multi" data-testid="quickadd-multi">
+            <p className="qa-multi-title">{items.length} tasks</p>
+            <ul>
+              {items.map((it, i) => {
+                const q = parseQuickAdd(it, today);
+                return (
+                  <li key={i}>
+                    <span className="qa-multi-name">{q.title || <em>Add a title</em>}</span>
+                    <span className="qa-multi-meta">
+                      {q.start !== null ? `${dayName(q.date!)} · ${formatTime(q.start, use24h)}` : q.date ? `Inbox · due ${dayName(q.date)}` : 'Inbox'}
+                      {q.duration ? ` · ${formatDuration(q.duration)}` : ''}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : text.trim() ? (
           <>
             <span className={`qa-dest${scheduled ? ' is-scheduled' : ''}`}>
               <Icon name={scheduled ? 'clock' : 'inbox'} size={14} />
@@ -118,7 +173,7 @@ function QuickAddForm() {
           <input type="checkbox" checked={keepOpen} onChange={(e) => setKeepOpen(e.target.checked)} /> Keep open to add more
         </label>
         <span className="qa-keys">
-          <kbd>↵</kbd> add <kbd>esc</kbd> close
+          <kbd>↵</kbd> add <kbd>⇧↵</kbd> another <kbd>esc</kbd> close
         </span>
       </div>
     </form>

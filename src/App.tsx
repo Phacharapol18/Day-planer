@@ -19,6 +19,7 @@ import { ProProvider } from './pro/ProProvider';
 import { Paywall } from './pro/Paywall';
 import { Ritual } from './components/Ritual';
 import { Insights } from './components/Insights';
+import { SlipBanner } from './components/SlipBanner';
 import { useNativeBridge, haptic } from './native/bridge';
 import { isNative } from './native/planner';
 
@@ -89,6 +90,7 @@ function Shell() {
         <Inbox id="inbox" />
         <main className="main" id="timeline-main">
           <Header />
+          <SlipBanner />
           <Timeline />
         </main>
       </div>

@@ -567,3 +567,49 @@ test.describe('insights', () => {
     await expect(page.getByTestId('paywall').getByRole('heading')).toHaveText('See where your time really goes.');
   });
 });
+
+test.describe('autopilot', () => {
+  test.skip(({ isMobile }) => isMobile, 'desktop-only');
+
+  test('slipped blocks: banner offers a re-plan into the rest of today (Pro), undoable', async ({ page }) => {
+    await boot(page, {
+      tasks: [
+        task({ title: 'Write spec', date: TODAY, start: 8 * 60, duration: 60, priority: 1 }),
+        task({ title: 'Inbox zero', date: TODAY, start: 9 * 60, duration: 30, priority: 3 }),
+        task({ title: 'Team lunch', date: TODAY, start: 12 * 60, duration: 60 }),
+      ],
+      pro: true,
+    });
+    const banner = page.getByTestId('slip-banner');
+    await expect(banner).toContainText('2 blocks slipped');
+    await page.getByTestId('slip-replan').click();
+    await expect(block(page, 'Inbox zero')).toHaveAttribute('aria-label', /10am – 10:30am/);
+    await expect(block(page, 'Write spec')).toHaveAttribute('aria-label', /10:30am – 11:30am/);
+    await expect(block(page, 'Team lunch')).toHaveAttribute('aria-label', /12pm – 1pm/);
+    await expect(banner).toHaveCount(0);
+    await page.keyboard.press('Control+z');
+    await expect(block(page, 'Write spec')).toHaveAttribute('aria-label', /8am – 9am/);
+  });
+
+  test('free users get the paywall from the slip banner', async ({ page }) => {
+    await boot(page, { tasks: [task({ title: 'Missed one', date: TODAY, start: 8 * 60, duration: 30 })] });
+    await expect(page.getByTestId('slip-banner')).toContainText('“Missed one” slipped');
+    await page.getByTestId('slip-replan').click();
+    await expect(page.getByTestId('paywall')).toBeVisible();
+  });
+
+  test('brain dump: several tasks in one go, with a preview', async ({ page }) => {
+    await boot(page);
+    await page.keyboard.press('Control+k');
+    const input = page.getByTestId('quickadd-input');
+    await input.fill('Call mom tomorrow then gym 6pm 45m #health also buy milk');
+    const multi = page.getByTestId('quickadd-multi');
+    await expect(multi).toContainText('3 tasks');
+    await expect(multi.locator('li').nth(1)).toContainText('Today · 6pm · 45m');
+    await input.press('Enter');
+    await expect(page.getByTestId('toast').last()).toContainText('Added 3 tasks · 1 on the timeline');
+    await expect(block(page, 'gym')).toHaveAttribute('data-cat', 'health');
+    await expect(page.getByTestId('inbox-item').filter({ hasText: 'Call mom' })).toContainText('Tmrw');
+    await expect(page.getByTestId('inbox-item').filter({ hasText: 'buy milk' })).toBeVisible();
+  });
+});

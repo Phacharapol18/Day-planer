@@ -9,6 +9,13 @@
     <!-- Show the phone's own calendar events on the timeline (read-only, opt-in) -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
+    <!-- Package visibility (API 30+): find the system speech recognizer for voice capture. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

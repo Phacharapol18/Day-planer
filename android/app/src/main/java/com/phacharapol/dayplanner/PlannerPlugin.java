@@ -1,12 +1,16 @@
 package com.phacharapol.dayplanner;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
+import android.speech.RecognizerIntent;
+
+import androidx.activity.result.ActivityResult;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -14,6 +18,7 @@ import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
@@ -22,6 +27,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -162,6 +168,35 @@ public class PlannerPlugin extends Plugin {
             }
         }
         call.resolve();
+    }
+
+    // ───────────── voice capture ─────────────
+
+    /** System speech UI (no RECORD_AUDIO permission needed); resolves with the best transcript. */
+    @PluginMethod
+    public void listen(PluginCall call) {
+        Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        i.putExtra(RecognizerIntent.EXTRA_PROMPT, call.getString("prompt", "What’s on your mind?"));
+        i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        try {
+            startActivityForResult(call, i, "onSpeech");
+        } catch (ActivityNotFoundException e) {
+            call.reject("Speech recognition isn’t available on this device", "UNAVAILABLE");
+        }
+    }
+
+    @ActivityCallback
+    private void onSpeech(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        JSObject ret = new JSObject();
+        String text = "";
+        if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+            ArrayList<String> matches = result.getData().getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (matches != null && !matches.isEmpty()) text = matches.get(0);
+        }
+        ret.put("text", text);
+        call.resolve(ret);
     }
 
     // ───────────── device calendars ─────────────

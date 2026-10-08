@@ -34,6 +34,7 @@ interface PlannerPlugin {
   openNotificationSettings(): Promise<void>;
   listCalendars(): Promise<{ calendars: DeviceCalendar[] }>;
   listEvents(o: { from: number; to: number; calendarIds: string[] }): Promise<{ events: RawDeviceEvent[] }>;
+  listen(o?: { prompt?: string }): Promise<{ text: string }>;
   addListener(event: 'pendingActions', cb: () => void): Promise<PluginListenerHandle>;
 }
 
