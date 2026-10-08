@@ -17,6 +17,7 @@ let failed = 0;
 async function step(name, fn, { optional = false } = {}) {
   const t0 = Date.now();
   try {
+    await ensurePage();
     await fn();
     results.push(`PASS  ${name} (${Date.now() - t0}ms)`);
   } catch (e) {
@@ -26,8 +27,42 @@ async function step(name, fn, { optional = false } = {}) {
       failed++;
       results.push(`FAIL  ${name}: ${msg}`);
     }
+    console.log(results[results.length - 1]);
+    diagnose(name);
+    return;
   }
   console.log(results[results.length - 1]);
+}
+
+const attempt = (f) => {
+  try {
+    return f();
+  } catch (e) {
+    return `(${String(e?.message || e).split('\n')[0]})`;
+  }
+};
+
+/** Device state at a failure, printed to the CI log (artifacts can't always be fetched). */
+function diagnose(name) {
+  const focus = attempt(() => (sh('dumpsys window').match(/mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}/) || [])[1]);
+  const top = attempt(() => (sh('dumpsys activity activities').match(/topResumedActivity=\S+ \S+ (\S+)/) || [])[1]);
+  const pid = attempt(() => sh(`pidof ${PKG} || true`).trim());
+  const ime = attempt(() => /mInputShown=true/.test(sh('dumpsys input_method')));
+  console.log(`  state: focus=${focus} top=${top} pid=${pid} ime=${ime}`);
+  const log = attempt(() =>
+    adb('logcat', '-d', '-v', 'time')
+      .split('\n')
+      .filter((l) => /AndroidRuntime|FATAL|Renderer|render process|RenderProcessGone|lowmemorykiller|Killing \d+:com\.phacharapol|ActivityTaskManager.*dayplanner|Process com\.phacharapol.* died|WebViewFactory|chromium.*(ERROR|FATAL)|Capacitor.*(Loading app|Error)/.test(l))
+      .slice(-30)
+      .join('\n    '),
+  );
+  console.log(`  logcat:\n    ${log || '(no matching lines)'}`);
+  const png = attempt(() => execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 }));
+  if (Buffer.isBuffer(png)) {
+    const file = `fail-${name.replace(/[^a-z0-9]+/gi, '-').slice(0, 40)}.png`;
+    writeFileSync(`${OUT}/${file}`, png);
+    console.log(`::group::png ${file}\nPNG-BEGIN ${file}\n${png.toString('base64')}\nPNG-END\n::endgroup::`);
+  }
 }
 
 async function waitFor(fn, what, timeout = 15000) {
@@ -59,9 +94,19 @@ sh(`am start -W -n ${PKG}/.MainActivity`);
 
 const [device] = await android.devices();
 if (!device) throw new Error('no adb device');
-const webview = await device.webView({ pkg: PKG, timeout: 60000 });
-const page = await webview.page();
-page.setDefaultTimeout(15000);
+let page;
+let pagePid = '';
+/** (Re)attach to the app's WebView. A closed page means the WebView went away: say why we reconnect. */
+async function ensurePage() {
+  if (page && !page.isClosed()) return;
+  const pid = sh(`pidof ${PKG} || true`).trim();
+  if (page) console.log(`  WebView page was closed; reconnecting (app pid ${pagePid} -> ${pid || 'none'})`);
+  if (!pid) sh(`am start -W -n ${PKG}/.MainActivity`);
+  const webview = await device.webView({ pkg: PKG, timeout: 60000 });
+  page = await webview.page();
+  page.setDefaultTimeout(15000);
+  pagePid = sh(`pidof ${PKG} || true`).trim();
+}
 
 await step('app boots to the timeline', async () => {
   await page.getByRole('heading', { level: 1 }).waitFor();
@@ -92,7 +137,10 @@ await step('ongoing Now card appears in the notification shade', async () => {
   await waitFor(() => sh('dumpsys notification --noredact').includes('Smoke focus block'), 'Now notification');
   sh('cmd statusbar expand-notifications');
   await sleep(1200);
-  writeFileSync(`${OUT}/02-now-card.png`, await device.screenshot());
+  const png = await device.screenshot();
+  writeFileSync(`${OUT}/02-now-card.png`, png);
+  // Inline in the log: how the shade lays out the Now card (expanded, actions visible) is part of the check.
+  console.log(`::group::png 02-now-card.png\nPNG-BEGIN 02-now-card.png\n${png.toString('base64')}\nPNG-END\n::endgroup::`);
 });
 
 await step('tapping Done on the Now card completes the block in the app', async () => {
@@ -122,6 +170,9 @@ await step('dayplanner://quickadd deep link opens quick add; Back closes it (3 r
   const imeShown = () => /mInputShown=true/.test(sh('dumpsys input_method'));
   const focus = () => (sh('dumpsys window').match(/mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}/) || [])[1] || '?';
   const open = async () => (await page.getByTestId('quickadd-input').count()) > 0;
+  // Back goes to the top-most window: make sure that is the app, not a shade left open by an earlier step.
+  sh('cmd statusbar collapse');
+  await waitFor(async () => focus().includes(`${PKG}/`), 'app window focused', 5000);
   for (let round = 1; round <= 3; round++) {
     // A trace of where each Back press went, printed every round: on a failure it is the evidence.
     const t0 = Date.now();
