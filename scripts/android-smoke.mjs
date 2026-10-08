@@ -119,21 +119,40 @@ await step('dayplanner://quickadd deep link opens quick add; Back closes it (3 r
     window.__bb = 0;
     document.addEventListener('backbutton', () => window.__bb++);
   });
+  const imeShown = () => /mInputShown=true/.test(sh('dumpsys input_method'));
+  const focus = () => (sh('dumpsys window').match(/mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}/) || [])[1] || '?';
+  const open = async () => (await page.getByTestId('quickadd-input').count()) > 0;
   for (let round = 1; round <= 3; round++) {
+    // A trace of where each Back press went, printed every round: on a failure it is the evidence.
+    const t0 = Date.now();
+    const trace = [];
+    const mark = async (what) => trace.push(`+${Date.now() - t0}ms ${what} [open=${await open()} ime=${imeShown()} bb=${await page.evaluate(() => window.__bb)} focus=${focus()}]`);
     sh('am start -a android.intent.action.VIEW -d dayplanner://quickadd');
     await page.getByTestId('quickadd-input').waitFor();
+    await mark('quick add visible');
     if (round === 1) writeFileSync(`${OUT}/03-quickadd.png`, await device.screenshot());
-    await sleep(400);
-    // First Back may only hide the keyboard (as in any Android app); press again if still open.
-    sh('input keyevent 4');
-    await sleep(700);
-    if ((await page.getByTestId('quickadd-input').count()) > 0) {
+    // The keyboard may still be on its way up; let it settle so the first Back is deterministic.
+    await waitFor(async () => imeShown(), 'keyboard', 2500).catch(() => undefined);
+    await mark('settled');
+    let closed = false;
+    for (let press = 1; press <= 3 && !closed; press++) {
       sh('input keyevent 4');
-      await sleep(700);
+      await waitFor(async () => !(await open()) || !imeShown(), 'back handled', 1500).catch(() => undefined);
+      await sleep(300);
+      closed = !(await open());
+      await mark(`back #${press}`);
     }
-    const bb = await page.evaluate(() => window.__bb);
-    const ime = sh('dumpsys input_method | grep -m1 mInputShown || true').trim();
-    await waitFor(async () => (await page.getByTestId('quickadd-input').count()) === 0, `round ${round}: quick add closed by back (backbutton events=${bb}, ${ime})`, 5000);
+    console.log(`  round ${round}: ${trace.join(' | ')}`);
+    if (!closed) {
+      writeFileSync(`${OUT}/03-back-fail-${round}.png`, await device.screenshot());
+      const log = adb('logcat', '-d', '-v', 'time')
+        .split('\n')
+        .filter((l) => /backButton|backbutton|ImeTracker|InputMethodManager|OnBackPressed|BackNavigation|Capacitor\/AppPlugin|KEYCODE_BACK/.test(l))
+        .slice(-40);
+      console.log(`  logcat:\n    ${log.join('\n    ')}`);
+      sh(`am start -n ${PKG}/.MainActivity`); // a stray Back may have minimized the app; later steps need it in front
+      throw new Error(`round ${round}: quick add still open after 3 Back presses`);
+    }
   }
 });
 
