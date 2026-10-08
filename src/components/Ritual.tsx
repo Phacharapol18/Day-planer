@@ -5,7 +5,7 @@ import { useCalendar } from '../calendar';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
 import { type Task, type DayEntry, inboxTasks, missedTasks, occurrencesOn, makeTask } from '../lib/model';
-import { autoPlan, mergeBusy } from '../lib/layout';
+import { autoPlan, usableFree } from '../lib/layout';
 import { streak } from '../lib/journal';
 import { addDays, diffDays, formatDuration, formatTime, minutesNow, monthDay, relativeDayName } from '../lib/time';
 import { haptic } from '../native/bridge';
@@ -52,8 +52,8 @@ function PlanFlow() {
   const nowMin = minutesNow(now);
   const from = Math.max(dayStart, Math.ceil(nowMin / 15) * 15);
   const busy = [...occurrencesOn(data.tasks, today), ...eventsOn(today)];
-  const busyLeft = mergeBusy(busy).reduce((s, b) => s + Math.max(0, Math.min(b.end, dayEnd) - Math.max(b.start, from)), 0);
-  const available = Math.max(0, dayEnd - from - busyLeft);
+  // The same free time the header and the timeline show.
+  const available = usableFree(busy, from, dayEnd);
   const pickedTasks = inbox.filter((t) => picked.has(t.id));
   const pickedMin = pickedTasks.reduce((s, t) => s + t.duration, 0);
   const over = pickedMin > available;

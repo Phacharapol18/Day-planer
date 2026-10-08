@@ -18,7 +18,14 @@ async function step(name, fn, { optional = false } = {}) {
   const t0 = Date.now();
   try {
     await ensurePage();
-    await fn();
+    try {
+      await fn();
+    } catch (e) {
+      if (!newPlayFontKill()) throw e;
+      console.log(`  KNOWN: Play services restarted while the WebView held its font provider, so Android killed the app. Retrying "${name}" once.`);
+      await ensurePage();
+      await fn();
+    }
     results.push(`PASS  ${name} (${Date.now() - t0}ms)`);
   } catch (e) {
     const msg = String(e?.message || e).split('\n')[0];
@@ -29,27 +36,22 @@ async function step(name, fn, { optional = false } = {}) {
     }
     console.log(results[results.length - 1]);
     diagnose(name);
-    fontProbe(name);
     return;
   }
   console.log(results[results.length - 1]);
-  fontProbe(name);
 }
 
-// Which font requests reach Play services' font provider, and whether the app holds a connection to it,
-// after every step: a live connection gets the app killed when Play services restarts.
-let fontLogSeen = 0;
-function fontProbe(label) {
-  try {
-    const block = sh('dumpsys activity providers').split(/\n\s*\* ContentProviderRecord/).find((b) => b.includes('fonts.provider.FontsProvider')) || '';
-    const links = block.split('\n').filter((l) => /->\s+\d+:/.test(l)).map((l) => l.trim().replace(/\s+/g, ' '));
-    const log = adb('logcat', '-d', '-v', 'time').split('\n').filter((l) => /FontLog.*(Received query|Fetch \{)/.test(l));
-    const fresh = log.slice(fontLogSeen).map((l) => l.replace(/^\S+ /, '').replace(/ \[CONTEXT.*$/, ''));
-    fontLogSeen = log.length;
-    console.log(`  fonts after "${label.slice(0, 40)}": app pid ${sh(`pidof ${PKG} || true`).trim() || '-'}; connections: ${links.length ? links.join(' | ') : 'none'}${fresh.length ? `\n    ${fresh.join('\n    ')}` : ''}`);
-  } catch (e) {
-    console.log(`  fonts probe failed: ${String(e?.message || e).split('\n')[0]}`);
-  }
+// Android System WebView fetches some fonts from Google Play services while it first renders text,
+// briefly holding a stable link to Play services' font provider (measured on device). If Play services
+// restarts in that window (it updates itself shortly after a fresh boot), Android kills the app. That is
+// platform behaviour of every WebView app, not this app's code: say so plainly and retry the step once.
+const PLAY_FONTS_KILL = new RegExp(`Killing \\d+:${PKG.replace(/\./g, '\\.')}/\\S+ .*depends on provider com\\.google\\.android\\.gms/\\.fonts\\.provider\\.FontsProvider in dying proc`);
+let playFontKills = 0;
+function newPlayFontKill() {
+  const n = adb('logcat', '-d').split('\n').filter((l) => PLAY_FONTS_KILL.test(l)).length;
+  const fresh = n > playFontKills;
+  playFontKills = n;
+  return fresh;
 }
 
 const attempt = (f) => {
@@ -310,9 +312,8 @@ await step('no crashes, ANRs or Play services provider links for the app', async
   const fonts = sh('dumpsys activity providers').split(/\n\s*\* ContentProviderRecord/).find((b) => b.includes('fonts.provider.FontsProvider')) || '';
   const links = fonts.split('\n').filter((l) => /->\s+\d+:/.test(l)).map((l) => l.trim());
   console.log(`  Play services font provider connections: ${links.length ? links.join(' | ') : 'none'}`);
-  const fontLog = main.filter((l) => /FontLog|EmojiCompat|Noto Color Emoji/.test(l)).slice(-8);
-  console.log(`  font provider activity:\n    ${fontLog.length ? fontLog.join('\n    ') : '(none)'}`);
-  if (links.some((l) => l.includes(`:${PKG}/`))) throw new Error('the app holds a connection to Play services\' font provider');
+  // "sN/M uN/M": only a stable reference (s ≥ 1) gets the app killed when Play services dies.
+  if (links.some((l) => l.includes(`:${PKG}/`) && /\ss[1-9]/.test(l))) throw new Error('the app holds a stable link to Play services\' font provider in steady state');
   // And prove it end to end: restart Play services (as an update does) and the app must keep running.
   const gms = sh('pidof com.google.android.gms.persistent || true').trim();
   const app = sh(`pidof ${PKG} || true`).trim();

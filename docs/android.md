@@ -56,3 +56,14 @@ cd android && ./gradlew assembleDebug        # → app/build/outputs/apk/debug/a
 - `SCHEDULE_EXACT_ALARM`: not granted by default on Android 14+. The app works without it (reminders may be a few minutes late) and Settings links to the system screen to allow it. It does **not** use `USE_EXACT_ALARM`, which Play restricts to alarm-clock and calendar apps.
 - `READ_CALENDAR`: asked for only when you tap **Show my phone's calendars**. Events are read on the device and never uploaded. Declare this in Play's **Data safety** form as "Calendar events — not collected, not shared (processed on device only)".
 - `RECEIVE_BOOT_COMPLETED`: re-arms reminders after a restart.
+
+## Known platform behaviour: Play services restarts
+
+Android kills any app that holds a *stable* link to a content provider when that provider's process dies.
+Android System WebView (inside this app's process, like every WebView app) fetches some fonts from Google
+Play services' font provider the first time it renders text, holding such a link for a moment (measured on
+the API 34 emulator: none in a fresh process, none with native views, a stable link only while the WebView
+first renders, none in steady state). If Play services restarts in that window, typically while it updates
+itself, Android restarts the app. Plans live in local storage, so nothing is lost. The app itself adds no
+such dependency (AppCompat's EmojiCompat initializer is removed), and the CI device test fails if the app
+holds a stable link in steady state or dies when Play services is killed.

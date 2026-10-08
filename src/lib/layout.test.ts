@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { layoutColumns, freeGaps, findSlot, autoPlan, mergeBusy } from './layout';
+import { layoutColumns, freeGaps, findSlot, autoPlan, mergeBusy, usableFree } from './layout';
 
 describe('layoutColumns', () => {
   it('gives non-overlapping blocks a full column', () => {
@@ -43,5 +43,16 @@ describe('free time', () => {
     const r = autoPlan([{ id: 'x', duration: 120 }, { id: 'y', duration: 60 }, { id: 'z', duration: 600 }], busy, 480, 900);
     expect(r.placed).toEqual([{ id: 'x', start: 660 }, { id: 'y', start: 480 }]);
     expect(r.unplaced).toEqual(['z']);
+  });
+});
+
+describe('usableFree', () => {
+  it('counts only gaps of 30 minutes or more, like the timeline', () => {
+    // 9:00–10:00 free (60), 10:15–10:30 free (15, too short), 11:00–12:00 free (60)
+    const busy = [
+      { start: 600, end: 615 },
+      { start: 630, end: 660 },
+    ];
+    expect(usableFree(busy, 540, 720)).toBe(120);
   });
 });

@@ -48,7 +48,6 @@ button:disabled {
 
 kbd {
   font: 500 11px/1 var(--font-ui);
-  font-feature-settings: 'cv08';
   padding: 3px 5px;
   border-radius: 5px;
   border: 1px solid var(--line-strong);
@@ -178,6 +177,10 @@ a.btn {
   text-decoration-color: currentColor;
 }
 
+kbd.kbd-letter {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', 'Roboto Mono', monospace;
+}
+
 .count {
   display: inline-grid;
   place-items: center;
@@ -300,7 +303,7 @@ a.btn {
   color: var(--muted);
 }
 .day-pill.is-today .day-pill-num {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 .day-pill-load {
   width: 22px;
@@ -731,9 +734,11 @@ a.btn {
 .block-meta-icon {
   opacity: 0.8;
 }
-.block-prio {
+.block-prio.prio {
   margin-left: 4px;
   font-weight: 800;
+  /* On tinted block fills the accent needs more ink to stay readable (≥4.6:1 in both themes). */
+  color: color-mix(in oklab, var(--accent-strong) 65%, var(--ink));
 }
 .block-notes {
   margin-top: 4px;
@@ -1427,6 +1432,9 @@ fieldset.field > legend {
 .editor-secondary {
   flex-wrap: wrap;
 }
+.dialog.editor {
+  scroll-padding-bottom: 80px;
+}
 @media (max-width: 1099px) {
   .btn--primary kbd {
     display: none; /* the shortcut stays in aria-keyshortcuts and Help */
@@ -1803,8 +1811,8 @@ fieldset.field > legend {
   height: 17px;
   padding: 0 6px;
   border-radius: 5px;
-  background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 60%, var(--cat-social)));
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent-strong), color-mix(in oklab, var(--accent-strong) 60%, var(--cat-social)));
+  color: var(--accent-ink);
   font: 700 10px/1 var(--font-ui);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1815,7 +1823,7 @@ fieldset.field > legend {
 }
 .go-pro:hover:not(:disabled) {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 .setting-title {
   display: inline-flex;
@@ -2200,7 +2208,7 @@ button.pro-card:hover {
   color: var(--ink);
 }
 .rt-meter-text em {
-  color: var(--accent);
+  color: var(--accent-strong);
   font-style: normal;
 }
 .rt-hint {
@@ -3399,13 +3407,21 @@ button.pro-card:hover {
     background: var(--surface);
     border-top: 1px solid var(--line);
   }
-  /* Duration: an even 4-column grid (7 options never fit one phone row; no lone "Custom") */
-  .chips--duration {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .chips--duration .chip-input {
-    min-width: 0;
+  /* Duration on phones: an even 4-column grid (7 options never fit one phone row; no lone "Custom") */
+  @media (max-width: 429px) {
+    .chips--duration {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .chips--duration .chip-input {
+      grid-column: span 2;
+      min-width: 0;
+    }
+    .chips--duration .chip-input input {
+      flex: 1;
+      min-width: 0;
+      width: auto;
+    }
   }
   /* B1: touch targets toward 48dp without moving the layout */
   :where(.icon-btn, .seg button, .chip-btn, .btn--sm) {

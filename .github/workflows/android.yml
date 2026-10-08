@@ -30,8 +30,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx cap sync android
-      # EmojiCompat (via AppCompat) fetches its font from Play services at startup; while it holds that
-      # provider, a Play services restart kills the app. The app removes the initializer: keep it removed.
+      # AppCompat's EmojiCompat initializer would fetch a font from Play services at startup; the app removes it.
       - name: Manifest guard (no EmojiCompat startup initializer)
         working-directory: android
         run: |

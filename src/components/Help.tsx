@@ -56,7 +56,7 @@ export function Help() {
               {rows.map(([k, v]) => (
                 <div key={k} className="help-row">
                   <dt>
-                    <kbd>{k}</kbd>
+                    <kbd className={/^[A-Z]$/.test(k) ? 'kbd-letter' : undefined}>{k}</kbd>
                   </dt>
                   <dd>{v}</dd>
                 </div>

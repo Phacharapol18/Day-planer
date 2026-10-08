@@ -127,3 +127,8 @@ export function autoPlan(
   }
   return { placed, unplaced };
 }
+
+/** Minutes of free time worth planning: the same 30-minute-or-longer gaps the timeline labels "Free". */
+export function usableFree(busy: { start: number; end: number }[], from: number, to: number): number {
+  return freeGaps(busy, from, to, 30).reduce((sum, g) => sum + (g.end - g.start), 0);
+}

@@ -110,11 +110,9 @@
             </intent-filter>
         </service>
 
-        <!-- AppCompat's EmojiCompat fetches an emoji font from Google Play services at startup and holds its
-             font provider while it does (long on a busy device or a first download). If Play services
-             restarts meanwhile (updates, memory pressure), Android kills this app, even in the foreground:
-             seen on the CI emulator. The UI is a WebView with its own emoji, and widgets/notifications render
-             in other processes, so nothing here needs EmojiCompat. -->
+        <!-- AppCompat pulls in EmojiCompat, whose startup initializer fetches an emoji font from Google
+             Play services. Nothing here needs it (the UI is a WebView; widgets and notifications render in
+             other processes), so it is removed: one less dependency on Play services' font provider. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

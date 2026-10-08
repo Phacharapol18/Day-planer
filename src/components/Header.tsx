@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { usePlanner } from '../state';
 import { occurrencesOn } from '../lib/model';
-import { mergeBusy, freeGaps } from '../lib/layout';
+import { mergeBusy, usableFree } from '../lib/layout';
 import { addDays, diffDays, fromKey, monthDay, weekday, weekdayName, formatDuration, minutesNow, DAY_NAMES_SHORT, relativeDayName, SNAP } from '../lib/time';
 import { Icon } from './Icon';
 import { useCalendar } from '../calendar';
@@ -45,7 +45,7 @@ export function Header() {
     const from = isToday ? Math.max(dayStart, Math.ceil(minutesNow(now) / SNAP) * SNAP) : dayStart;
     const events = eventsOn(selected);
     // The same usable gaps (30 min or more) the timeline labels "Free", so the two always agree.
-    const free = diffDays(selected, today) < 0 ? 0 : freeGaps([...occ, ...events], from, dayEnd, 30).reduce((s, g) => s + (g.end - g.start), 0);
+    const free = diffDays(selected, today) < 0 ? 0 : usableFree([...occ, ...events], from, dayEnd);
     return { total: occ.length, doneCount, planned, free, events: events.length, pct: occ.length ? Math.round((doneCount / occ.length) * 100) : 0 };
   }, [data.tasks, selected, today, now, dayStart, dayEnd, eventsOn]);
 
