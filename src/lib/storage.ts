@@ -134,6 +134,8 @@ export interface LoadResult {
   data: PlannerData;
   imported: number;
   corrupt: boolean;
+  /** Nothing saved and nothing imported: a brand-new user. */
+  fresh: boolean;
 }
 
 export function load(storage: Storage, today: DateKey): LoadResult {
@@ -156,6 +158,7 @@ export function load(storage: Storage, today: DateKey): LoadResult {
       /* storage full or unavailable */
     }
   }
+  const hadData = !!data;
   let imported = 0;
   if (!data) {
     data = emptyData();
@@ -167,7 +170,7 @@ export function load(storage: Storage, today: DateKey): LoadResult {
       /* storage unavailable */
     }
   }
-  return { data, imported, corrupt };
+  return { data, imported, corrupt, fresh: !hadData && !imported && !corrupt };
 }
 
 export function save(storage: Storage, data: PlannerData): boolean {

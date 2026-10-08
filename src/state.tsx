@@ -15,7 +15,7 @@ export type EditorTarget =
   | { mode: 'new'; draft: Task }
   | { mode: 'edit'; id: string; date: DateKey | null };
 
-export type Panel = null | 'quickadd' | 'settings' | 'help' | 'focus' | 'plan' | 'shutdown' | 'insights';
+export type Panel = null | 'quickadd' | 'settings' | 'help' | 'focus' | 'plan' | 'shutdown' | 'insights' | 'welcome';
 
 interface PlannerApi {
   data: PlannerData;
@@ -78,7 +78,7 @@ function safeStorage(): Storage | null {
 export function PlannerProvider({ children }: { children: ReactNode }) {
   const storage = useMemo(safeStorage, []);
   const initial = useMemo(() => {
-    if (!storage) return { data: sanitizeData({ tasks: [] })!, imported: 0, corrupt: false };
+    if (!storage) return { data: sanitizeData({ tasks: [] })!, imported: 0, corrupt: false, fresh: false };
     return load(storage, todayKey());
   }, [storage]);
 
@@ -88,7 +88,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   const today = todayKey(now);
   const [selected, setSelected] = useState<DateKey>(today);
   const [editor, setEditor] = useState<EditorTarget | null>(null);
-  const [panel, setPanel] = useState<Panel>(null);
+  const [panel, setPanel] = useState<Panel>(() => (initial.fresh ? 'welcome' : null));
   const [inboxOpen, setInboxOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastSeq = useRef(0);

@@ -104,6 +104,11 @@ public class WidgetRenderTest {
         assertEquals(View.VISIBLE, light.findViewById(R.id.w_timer).getVisibility());
         assertEquals(View.VISIBLE, light.findViewById(R.id.w_done).getVisibility());
         assertTrue(text(light, R.id.w_next).startsWith("Then Lunch with Mia"));
+        // Nothing may be clipped at the default 4×2 size.
+        View nextLine = light.findViewById(R.id.w_next);
+        int bottom = nextLine.getBottom() + ((View) nextLine.getParent()).getTop();
+        assertTrue("next line clipped: " + bottom + " > " + (light.getHeight() - light.getPaddingBottom()),
+                bottom <= light.getHeight() - light.getPaddingBottom());
         inflate(night(ctx()), Widgets.nowViews(night(ctx()), s, now), 320, 150, "now-dark.png");
     }
 

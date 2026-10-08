@@ -78,8 +78,8 @@ export function Header() {
             <Icon name="target" size={16} /> Focus
           </button>
           {!isPro && (
-            <button type="button" className="btn btn--quiet go-pro" onClick={() => openPaywall()} data-testid="go-pro">
-              <Icon name="sparkle" size={16} /> <span className="hide-sm">Go </span>Pro
+            <button type="button" className="btn btn--quiet go-pro" onClick={() => openPaywall()} data-testid="go-pro" aria-label="Go Pro">
+              <Icon name="sparkle" size={16} /> <span className="hide-sm">Go Pro</span>
             </button>
           )}
           <button type="button" className="icon-btn hide-sm" onClick={() => setPanel('help')} aria-label="Keyboard shortcuts" title="Shortcuts (?)">

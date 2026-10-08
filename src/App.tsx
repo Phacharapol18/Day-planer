@@ -20,6 +20,7 @@ import { Paywall } from './pro/Paywall';
 import { Ritual } from './components/Ritual';
 import { Insights } from './components/Insights';
 import { SlipBanner } from './components/SlipBanner';
+import { Welcome } from './components/Welcome';
 import { useNativeBridge, haptic } from './native/bridge';
 import { isNative } from './native/planner';
 
@@ -101,6 +102,7 @@ function Shell() {
       <Settings />
       <Help />
       <Focus />
+      <Welcome />
       <Ritual />
       <Insights />
       <Paywall />

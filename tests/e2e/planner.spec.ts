@@ -16,7 +16,8 @@ async function boot(page: Page, seed?: { tasks?: unknown[]; legacy?: unknown; pr
       if (sessionStorage.getItem('__seeded')) return;
       sessionStorage.setItem('__seeded', '1');
       localStorage.clear();
-      if (s?.tasks) localStorage.setItem('dayplanner:v1', JSON.stringify({ version: 1, tasks: s.tasks, settings: {} }));
+      // Existing users (not a first run): seed saved data unless the test is about migration.
+      if (!s?.legacy) localStorage.setItem('dayplanner:v1', JSON.stringify({ version: 1, tasks: s?.tasks ?? [], settings: {} }));
       if (s?.legacy) localStorage.setItem('saveArr', JSON.stringify(s.legacy));
       if (s?.pro) localStorage.setItem('dayplanner:pro', JSON.stringify({ active: true, source: 'dev', plan: 'yearly', willCancel: false, inTrial: false, expiresAt: null, checkedAt: Date.now() }));
     },
@@ -611,5 +612,33 @@ test.describe('autopilot', () => {
     await expect(block(page, 'gym')).toHaveAttribute('data-cat', 'health');
     await expect(page.getByTestId('inbox-item').filter({ hasText: 'Call mom' })).toContainText('Tmrw');
     await expect(page.getByTestId('inbox-item').filter({ hasText: 'buy milk' })).toBeVisible();
+  });
+});
+
+test.describe('first run', () => {
+  test('welcome tour, then an example day around now', async ({ page, isMobile }) => {
+    await page.clock.setFixedTime(NOW);
+    await page.goto('/');
+    const w = page.getByTestId('welcome');
+    await expect(w.getByRole('heading')).toHaveText('Your day, as a timeline.');
+    await page.getByTestId('welcome-next').click();
+    await expect(w.getByRole('heading')).toHaveText('Say it how you’d say it.');
+    await page.getByTestId('welcome-next').click();
+    await page.getByTestId('welcome-example').click();
+    await expect(w).toHaveCount(0);
+    await expect(page.getByTestId('block')).toHaveCount(5);
+    await expect(block(page, 'Deep work — the important thing')).toHaveAttribute('aria-label', /happening now.*today’s highlight/);
+    if (!isMobile) await expect(page.getByTestId('inbox-item')).toHaveCount(3);
+    // It's saved: a reload doesn't show the tour again.
+    await page.reload();
+    await expect(page.getByTestId('welcome')).toHaveCount(0);
+    await expect(page.getByTestId('block')).toHaveCount(5);
+  });
+
+  test('skip leaves a blank page', async ({ page }) => {
+    await page.clock.setFixedTime(NOW);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Skip' }).click();
+    await expect(page.locator('.tl-empty-title')).toHaveText('A blank page.');
   });
 });
