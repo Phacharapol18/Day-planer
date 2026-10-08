@@ -29,9 +29,27 @@ async function step(name, fn, { optional = false } = {}) {
     }
     console.log(results[results.length - 1]);
     diagnose(name);
+    fontProbe(name);
     return;
   }
   console.log(results[results.length - 1]);
+  fontProbe(name);
+}
+
+// Which font requests reach Play services' font provider, and whether the app holds a connection to it,
+// after every step: a live connection gets the app killed when Play services restarts.
+let fontLogSeen = 0;
+function fontProbe(label) {
+  try {
+    const block = sh('dumpsys activity providers').split(/\n\s*\* ContentProviderRecord/).find((b) => b.includes('fonts.provider.FontsProvider')) || '';
+    const links = block.split('\n').filter((l) => /->\s+\d+:/.test(l)).map((l) => l.trim().replace(/\s+/g, ' '));
+    const log = adb('logcat', '-d', '-v', 'time').split('\n').filter((l) => /FontLog.*(Received query|Fetch \{)/.test(l));
+    const fresh = log.slice(fontLogSeen).map((l) => l.replace(/^\S+ /, '').replace(/ \[CONTEXT.*$/, ''));
+    fontLogSeen = log.length;
+    console.log(`  fonts after "${label.slice(0, 40)}": app pid ${sh(`pidof ${PKG} || true`).trim() || '-'}; connections: ${links.length ? links.join(' | ') : 'none'}${fresh.length ? `\n    ${fresh.join('\n    ')}` : ''}`);
+  } catch (e) {
+    console.log(`  fonts probe failed: ${String(e?.message || e).split('\n')[0]}`);
+  }
 }
 
 const attempt = (f) => {
