@@ -33,6 +33,9 @@ jobs:
       - name: Build debug APK
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug lintDebug
+      - name: Lint findings
+        if: always()
+        run: cat android/app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk

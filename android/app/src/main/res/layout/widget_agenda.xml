@@ -46,8 +46,7 @@
             android:background="@drawable/widget_button"
             android:contentDescription="@string/add"
             android:padding="8dp"
-            android:src="@drawable/ic_plus"
-            android:tint="@color/widget_bg" />
+            android:src="@drawable/ic_widget_plus" />
     </LinearLayout>
 
     <FrameLayout

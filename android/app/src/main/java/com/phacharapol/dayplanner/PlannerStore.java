@@ -2,6 +2,7 @@ package com.phacharapol.dayplanner;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.text.TextUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -216,7 +217,7 @@ public final class PlannerStore {
             if (keys.contains(key)) return false;
             keys.add(key);
             while (keys.size() > 200) keys.remove(0);
-            prefs(ctx).edit().putString(KEY_FIRED, String.join("\n", keys)).apply();
+            prefs(ctx).edit().putString(KEY_FIRED, TextUtils.join("\n", keys)).apply();
             return true;
         }
     }
