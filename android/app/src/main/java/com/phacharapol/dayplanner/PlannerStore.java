@@ -113,8 +113,14 @@ public final class PlannerStore {
             String[] p = dateKey.split("-");
             Calendar c = Calendar.getInstance();
             c.clear();
+            // Set wall-clock fields rather than adding elapsed minutes: on DST change days a 9:00 block
+            // must still mean 9:00 local time. 24:00 (end of day) is midnight of the next day.
             c.set(Integer.parseInt(p[0]), Integer.parseInt(p[1]) - 1, Integer.parseInt(p[2]), 0, 0, 0);
-            c.add(Calendar.MINUTE, minutes);
+            int days = minutes / (24 * 60);
+            int rest = minutes % (24 * 60);
+            if (days > 0) c.add(Calendar.DAY_OF_MONTH, days);
+            c.set(Calendar.HOUR_OF_DAY, rest / 60);
+            c.set(Calendar.MINUTE, rest % 60);
             return c.getTimeInMillis();
         } catch (RuntimeException e) {
             return -1;
