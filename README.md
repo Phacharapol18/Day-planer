@@ -59,7 +59,7 @@ npm run build && npm run test:e2e  # 33 Playwright tests (desktop + Pixel 7)
 Every push runs:
 - **Test & deploy**: typecheck, unit tests, e2e, then publishes the web app to GitHub Pages from `main`.
 - **Android**: lint, debug APK, a signed AAB once secrets are set, then the app on an **Android 14 emulator**:
-  - a 10-step device smoke test: Now card, notification Done button, share, deep links, Back, widgets, alarms, phone calendar, crash check;
+  - a 10-step device smoke test: Now card, notification Done button, share, deep links, Back, widgets, alarms, phone calendar, crash and ANR check;
   - on-device widget render tests.
 
 ### Upgrading from v1

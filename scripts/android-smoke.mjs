@@ -52,7 +52,7 @@ function diagnose(name) {
   const log = attempt(() =>
     adb('logcat', '-d', '-v', 'time')
       .split('\n')
-      .filter((l) => /AndroidRuntime|FATAL|Renderer|render process|RenderProcessGone|lowmemorykiller|Killing \d+:com\.phacharapol|ActivityTaskManager.*dayplanner|Process com\.phacharapol.* died|WebViewFactory|chromium.*(ERROR|FATAL)|Capacitor.*(Loading app|Error)/.test(l))
+      .filter((l) => /ANR in|AndroidRuntime|FATAL|Renderer|render process|RenderProcessGone|lowmemorykiller|Killing \d+:com\.phacharapol|ActivityTaskManager.*dayplanner|Process com\.phacharapol.* died|WebViewFactory|chromium.*(ERROR|FATAL)|Capacitor.*(Loading app|Error)/.test(l))
       .slice(-30)
       .join('\n    '),
   );
@@ -257,12 +257,19 @@ await step(
   },
 );
 
-await step('no crashes in logcat', async () => {
+await step('no crashes or ANRs for the app', async () => {
   const log = adb('logcat', '-d', '-b', 'crash');
   if (log.includes(PKG)) {
     writeFileSync(`${OUT}/crash.txt`, log);
     throw new Error('crash buffer mentions the app');
   }
+  const main = adb('logcat', '-d', '-v', 'time').split('\n');
+  const anrs = main.filter((l) => /ANR in /.test(l));
+  // Device health: other apps' ANRs and very slow frames mean the emulator was starved, not that the app failed.
+  const daveys = main.map((l) => Number((l.match(/Davey! duration=(\d+)ms/) || [])[1] || 0)).filter((ms) => ms >= 1000);
+  console.log(`  device health: ${daveys.length} frames >=1s (max ${Math.max(0, ...daveys)}ms); ANRs: ${anrs.length ? anrs.join(' | ') : 'none'}`);
+  const ours = anrs.filter((l) => l.includes(`ANR in ${PKG}`));
+  if (ours.length) throw new Error(`the app stopped responding: ${ours[0]}`);
 });
 
 writeFileSync(`${OUT}/04-final.png`, await device.screenshot());
