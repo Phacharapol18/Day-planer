@@ -5,11 +5,13 @@ import { usePlanActions } from '../actions';
 import { type Task, inboxTasks, missedTasks } from '../lib/model';
 import { formatDuration, formatTime, monthDay, shortDueLabel } from '../lib/time';
 import { Icon } from './Icon';
+import { usePro } from '../pro/ProProvider';
 
 export function Inbox({ id }: { id?: string }) {
   const { data, today, setEditor, dispatch, inboxOpen, setInboxOpen } = usePlanner();
   const { drag, registerInbox } = useDrag();
   const { addFromText, autoPlanDay } = usePlanActions();
+  const { isPro } = usePro();
   const [text, setText] = useState('');
   const rootRef = useRef<HTMLElement>(null);
 
@@ -39,6 +41,7 @@ export function Inbox({ id }: { id?: string }) {
         </h2>
         <button type="button" className="btn btn--quiet btn--sm" onClick={autoPlanDay} disabled={!inbox.length} title="Fit inbox tasks into free time, highest priority first">
           <Icon name="sparkle" size={15} /> Auto-plan
+          {!isPro && <span className="pro-chip">Pro</span>}
         </button>
         <button type="button" className="icon-btn inbox-close" onClick={() => setInboxOpen(false)} aria-label="Close inbox">
           <Icon name="x" />

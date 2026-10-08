@@ -48,6 +48,7 @@ public final class PlannerStore {
         public boolean reminders;
         public int leadMinutes;
         public boolean nowCard;
+        public boolean pro;
         public int inboxCount;
         public final List<Item> items = new ArrayList<>();
     }
@@ -77,6 +78,7 @@ public final class PlannerStore {
             s.reminders = o.optBoolean("reminders", false);
             s.leadMinutes = Math.max(0, o.optInt("leadMinutes", 0));
             s.nowCard = o.optBoolean("nowCard", false);
+            s.pro = o.optBoolean("pro", false);
             s.inboxCount = o.optInt("inboxCount", 0);
             JSONArray arr = o.optJSONArray("items");
             if (arr != null) {

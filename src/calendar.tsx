@@ -4,6 +4,7 @@ import { usePlanner } from './state';
 import { type ExternalEvent, type RawDeviceEvent, toExternalEvents, groupByDate } from './lib/external';
 import { type DateKey, addDays, fromKey, weekday } from './lib/time';
 import { Planner, isNative } from './native/planner';
+import { usePro } from './pro/ProProvider';
 
 declare global {
   interface Window {
@@ -31,7 +32,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const { data, selected, today } = usePlanner();
   const ids = data.settings.calendarIds;
   const mock = typeof window !== 'undefined' && typeof window.__dpMockCalendar === 'function';
-  const enabled = mock || (isNative && ids.length > 0);
+  const { isPro } = usePro();
+  const enabled = mock || (isNative && isPro && ids.length > 0);
   const [events, setEvents] = useState<ExternalEvent[]>([]);
   const [tick, setTick] = useState(0);
 

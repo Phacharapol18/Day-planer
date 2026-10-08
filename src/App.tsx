@@ -15,15 +15,19 @@ import { Focus } from './components/Focus';
 import { Toasts } from './components/Toasts';
 import { Icon } from './components/Icon';
 import { CalendarProvider } from './calendar';
+import { ProProvider } from './pro/ProProvider';
+import { Paywall } from './pro/Paywall';
 import { useNativeBridge, haptic } from './native/bridge';
 import { isNative } from './native/planner';
 
 export default function App() {
   return (
     <PlannerProvider>
-      <CalendarProvider>
-        <Shell />
-      </CalendarProvider>
+      <ProProvider>
+        <CalendarProvider>
+          <Shell />
+        </CalendarProvider>
+      </ProProvider>
     </PlannerProvider>
   );
 }
@@ -93,6 +97,7 @@ function Shell() {
       <Settings />
       <Help />
       <Focus />
+      <Paywall />
       <Toasts />
       <UpdatePrompt />
     </DragProvider>

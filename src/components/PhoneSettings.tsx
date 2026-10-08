@@ -4,12 +4,14 @@ import { usePlanner } from '../state';
 import { Planner, isNative, type DeviceCalendar, type NativeStatus } from '../native/planner';
 import { colorHex } from '../lib/external';
 import { Icon } from './Icon';
+import { usePro } from '../pro/ProProvider';
 
 const LEADS = [0, 5, 10, 15, 30];
 
 /** Reminders, the Now card, exact timing and phone calendars. Adapts to web vs. Android. */
 export function PhoneSettings() {
   const { data, dispatch, toast } = usePlanner();
+  const { isPro, require } = usePro();
   const s = data.settings;
   const [status, setStatus] = useState<NativeStatus | null>(null);
   const [calendars, setCalendars] = useState<DeviceCalendar[] | null>(null);
@@ -52,6 +54,7 @@ export function PhoneSettings() {
   };
 
   const setNowCard = async (on: boolean) => {
+    if (on && !require('nowcard')) return;
     if (on && isNative) {
       const { granted } = await Planner.requestNotifications();
       if (!granted) {
@@ -63,6 +66,7 @@ export function PhoneSettings() {
   };
 
   const connectCalendars = async () => {
+    if (!require('calendars')) return;
     const { granted } = await Planner.requestCalendar();
     if (!granted) {
       toast('Calendar access was not allowed.', { tone: 'error' });
@@ -109,10 +113,12 @@ export function PhoneSettings() {
         <>
           <label className="setting">
             <span>
-              Now card in notifications
+              <span className="setting-title">
+                Now card in notifications {!isPro && <span className="pro-chip">Pro</span>}
+              </span>
               <small className="settings-sub">Live countdown with Done and +15 min</small>
             </span>
-            <input type="checkbox" className="switch" checked={s.nowCard} onChange={(e) => void setNowCard(e.target.checked)} />
+            <input type="checkbox" className="switch" checked={s.nowCard && isPro} onChange={(e) => void setNowCard(e.target.checked)} />
           </label>
           {status && !status.exactAlarms && s.notify && (
             <div className="setting setting--notice">
@@ -134,9 +140,9 @@ export function PhoneSettings() {
             </div>
           )}
 
-          <h3 className="section-label section-label--spaced">Phone calendars</h3>
+          <h3 className="section-label section-label--spaced">Phone calendars {!isPro && <span className="pro-chip">Pro</span>}</h3>
           <p className="settings-hint">See meetings from Google, Outlook or Samsung calendars on your timeline. Free time and Auto-plan work around them. Read-only; nothing leaves your phone.</p>
-          {status?.calendar && calendars ? (
+          {isPro && status?.calendar && calendars ? (
             calendars.length === 0 ? (
               <p className="settings-hint">No calendars found on this phone.</p>
             ) : (

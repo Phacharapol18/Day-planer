@@ -79,7 +79,11 @@ await step('seeded plan renders and syncs to native', async () => {
       { id: 'smoke-next', title: 'Smoke next block', notes: '', duration: 30, priority: 0, category: 'health', date: key(deviceNow), start: Math.min(startMin + 90, 1410), due: null, repeat: 'none', done: false, doneOn: [], skipOn: [], createdAt: 2 },
     ],
   };
-  await page.evaluate((d) => localStorage.setItem('dayplanner:v1', JSON.stringify(d)), data);
+  await page.evaluate((d) => {
+    localStorage.setItem('dayplanner:v1', JSON.stringify(d));
+    // Debug builds honour a dev Pro unlock so Pro-only native features can be exercised.
+    localStorage.setItem('dayplanner:pro', JSON.stringify({ active: true, source: 'dev', plan: 'yearly', willCancel: false, inTrial: false, expiresAt: null, checkedAt: Date.now() }));
+  }, data);
   await page.reload();
   await page.locator('[data-testid="block"]', { hasText: 'Smoke focus block' }).waitFor();
 });
@@ -92,14 +96,9 @@ await step('ongoing Now card appears in the notification shade', async () => {
 });
 
 await step('tapping Done on the Now card completes the block in the app', async () => {
-  // Find the notification's "Done" button in the UI hierarchy and tap it.
-  sh('uiautomator dump /sdcard/ui.xml');
-  const xml = sh('cat /sdcard/ui.xml');
-  const m = /text="Done"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(xml) || /content-desc="Done"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(xml);
-  if (!m) throw new Error('Done button not found in shade');
-  const x = Math.round((+m[1] + +m[3]) / 2);
-  const y = Math.round((+m[2] + +m[4]) / 2);
-  sh(`input tap ${x} ${y}`);
+  // The Now card's live countdown keeps the UI from ever being "idle", so `uiautomator dump`
+  // can't snapshot it; Playwright's Android driver finds and taps the button directly.
+  await device.tap({ text: 'Done' }, { timeout: 15000 });
   await sleep(800);
   sh('cmd statusbar collapse');
   await waitFor(async () => {
@@ -118,7 +117,10 @@ await step('dayplanner://quickadd deep link opens quick add; back closes it', as
   sh('am start -a android.intent.action.VIEW -d dayplanner://quickadd');
   await page.getByTestId('quickadd-input').waitFor();
   writeFileSync(`${OUT}/03-quickadd.png`, await device.screenshot());
+  // First Back hides the keyboard (as for any Android app), the second closes quick add.
   sh('input keyevent 4');
+  await sleep(500);
+  if ((await page.getByTestId('quickadd-input').count()) > 0) sh('input keyevent 4');
   await waitFor(async () => (await page.getByTestId('quickadd-input').count()) === 0, 'quick add closed by back');
 });
 
@@ -155,7 +157,6 @@ await step(
     await page.reload();
     await page.locator('[data-testid="event"]', { hasText: 'SmokeCalEvent' }).waitFor({ state: 'attached', timeout: 20000 });
   },
-  { optional: true },
 );
 
 await step('no crashes in logcat', async () => {

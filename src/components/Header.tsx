@@ -5,11 +5,13 @@ import { mergeBusy } from '../lib/layout';
 import { addDays, diffDays, fromKey, monthDay, weekday, weekdayName, formatDuration, minutesNow, DAY_NAMES_SHORT, relativeDayName } from '../lib/time';
 import { Icon } from './Icon';
 import { useCalendar } from '../calendar';
+import { usePro } from '../pro/ProProvider';
 
 export function Header() {
   const { data, selected, setSelected, today, now, setPanel } = usePlanner();
   const { dayStart, dayEnd } = data.settings;
   const { eventsOn } = useCalendar();
+  const { isPro, openPaywall } = usePro();
 
   // Week starts on Monday.
   const weekStart = addDays(selected, -((weekday(selected) + 6) % 7));
@@ -63,6 +65,11 @@ export function Header() {
           <button type="button" className="btn btn--quiet hide-sm" onClick={() => setPanel('focus')} aria-keyshortcuts="F">
             <Icon name="target" size={16} /> Focus
           </button>
+          {!isPro && (
+            <button type="button" className="btn btn--quiet go-pro" onClick={() => openPaywall()} data-testid="go-pro">
+              <Icon name="sparkle" size={16} /> <span className="hide-sm">Go </span>Pro
+            </button>
+          )}
           <button type="button" className="icon-btn hide-sm" onClick={() => setPanel('help')} aria-label="Keyboard shortcuts" title="Shortcuts (?)">
             <Icon name="keyboard" />
           </button>

@@ -8,6 +8,7 @@ import { usePlanActions } from '../actions';
 import { buildSnapshot } from '../lib/snapshot';
 import { occursOn } from '../lib/model';
 import { Planner, isNative, type PendingAction } from './planner';
+import { usePro } from '../pro/ProProvider';
 
 export const haptic = {
   pick: () => isNative && void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined),
@@ -16,12 +17,12 @@ export const haptic = {
 };
 
 /** Parse dayplanner:// links from widgets, the Quick Settings tile and notifications. */
-export function routeFromUrl(url: string): { kind: 'quickadd' | 'focus' | 'today' } | { kind: 'day'; date: string } | null {
+export function routeFromUrl(url: string): { kind: 'quickadd' | 'focus' | 'today' | 'pro' } | { kind: 'day'; date: string } | null {
   const m = /^dayplanner:\/\/([a-z]+)(?:\/(\d{4}-\d{2}-\d{2}))?/i.exec(url.trim());
   if (!m) return null;
   const host = m[1].toLowerCase();
   if (host === 'day' && m[2]) return { kind: 'day', date: m[2] };
-  if (host === 'quickadd' || host === 'focus' || host === 'today') return { kind: host };
+  if (host === 'quickadd' || host === 'focus' || host === 'today' || host === 'pro') return { kind: host };
   return null;
 }
 
@@ -31,23 +32,24 @@ export function useNativeBridge() {
   const { data, today } = planner;
   const { eventsOn } = useCalendar();
   const { addFromText } = usePlanActions();
+  const { isPro, openPaywall } = usePro();
 
   // Latest values for long-lived native listeners.
-  const live = useRef({ planner, addFromText });
-  live.current = { planner, addFromText };
+  const live = useRef({ planner, addFromText, openPaywall });
+  live.current = { planner, addFromText, openPaywall };
 
   // 1) Mirror the next few days to native storage for widgets, alarms and the Now card.
   const lastSent = useRef('');
   useEffect(() => {
     if (!isNative) return;
-    const json = JSON.stringify(buildSnapshot(data.tasks, data.settings, today, eventsOn));
+    const json = JSON.stringify(buildSnapshot(data.tasks, data.settings, today, eventsOn, isPro));
     if (json === lastSent.current) return;
     const t = window.setTimeout(() => {
       lastSent.current = json;
       Planner.setSnapshot({ json }).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(t);
-  }, [data.tasks, data.settings, today, eventsOn]);
+  }, [data.tasks, data.settings, today, eventsOn, isPro]);
 
   // 2) Replay actions taken outside the app (notification buttons, widget Done, share sheet).
   useEffect(() => {
@@ -99,6 +101,10 @@ export function useNativeBridge() {
       p.setEditor(null);
       p.setInboxOpen(false);
       if (r.kind === 'quickadd') p.setPanel('quickadd');
+      else if (r.kind === 'pro') {
+        p.setPanel(null);
+        live.current.openPaywall('widgets');
+      }
       else if (r.kind === 'focus') {
         p.setSelected(p.today);
         p.setPanel('focus');

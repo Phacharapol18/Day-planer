@@ -30,6 +30,9 @@
     <string name="done_of">%1$d of %2$d done</string>
     <string name="inbox_count">%1$d in inbox</string>
     <string name="add">Add</string>
+    <string name="pro_label">Day Planner Pro</string>
+    <string name="widget_locked_title">Your day on your home screen</string>
+    <string name="widget_locked_sub">Tap to unlock widgets with Pro</string>
     <string name="mark_done">Mark done</string>
 
     <string name="widget_now_label">Now &amp; next</string>

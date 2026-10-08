@@ -1,7 +1,9 @@
 package com.phacharapol.dayplanner;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -80,6 +82,7 @@ public class PlannerPlugin extends Plugin {
         ret.put("exactAlarms", Scheduler.canExact(getContext()));
         ret.put("calendar", getPermissionState("calendar") == PermissionState.GRANTED);
         ret.put("sdk", Build.VERSION.SDK_INT);
+        ret.put("debug", (getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0);
         call.resolve(ret);
     }
 
@@ -121,23 +124,43 @@ public class PlannerPlugin extends Plugin {
 
     @PluginMethod
     public void openExactAlarmSettings(PluginCall call) {
-        Intent i;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getContext().getPackageName()));
-        } else {
-            i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
-        }
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        getContext().startActivity(i);
-        call.resolve();
+        Intent i = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                ? new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getContext().getPackageName()))
+                : appDetails();
+        launch(i, call);
     }
 
     @PluginMethod
     public void openNotificationSettings(PluginCall call) {
-        Intent i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-        i.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+        Intent i;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            i.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+        } else {
+            i = appDetails();
+        }
+        launch(i, call);
+    }
+
+    private Intent appDetails() {
+        return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+    }
+
+    /** Some OEM builds lack a settings screen; fall back to app details rather than crashing. */
+    private void launch(Intent i, PluginCall call) {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        getContext().startActivity(i);
+        try {
+            getContext().startActivity(i);
+        } catch (ActivityNotFoundException e) {
+            Intent fallback = appDetails();
+            fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                getContext().startActivity(fallback);
+            } catch (ActivityNotFoundException ignored) {
+                call.reject("settings screen unavailable");
+                return;
+            }
+        }
         call.resolve();
     }
 
@@ -160,17 +183,18 @@ public class PlannerPlugin extends Plugin {
             call.reject("calendar permission not granted", "NO_PERMISSION");
             return;
         }
-        Double from = call.getDouble("from");
-        Double to = call.getDouble("to");
+        // Epoch millis arrive as Long (too big for Integer); PluginCall.getDouble ignores Longs.
+        long from = call.getData().optLong("from", -1);
+        long to = call.getData().optLong("to", -1);
         JSArray ids = call.getArray("calendarIds", new JSArray());
-        if (from == null || to == null) {
+        if (from < 0 || to <= from) {
             call.reject("from/to required");
             return;
         }
         Set<String> set = new HashSet<>();
         for (int i = 0; i < ids.length(); i++) set.add(ids.optString(i));
         JSObject ret = new JSObject();
-        ret.put("events", CalendarReader.events(getContext(), from.longValue(), to.longValue(), set));
+        ret.put("events", CalendarReader.events(getContext(), from, to, set));
         call.resolve(ret);
     }
 }

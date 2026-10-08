@@ -7,6 +7,7 @@ import type { Theme } from '../lib/model';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
 import { PhoneSettings } from './PhoneSettings';
+import { ProSettings } from '../pro/ProSettings';
 
 function download(name: string, mime: string, body: string) {
   const url = URL.createObjectURL(new Blob([body], { type: mime }));
@@ -54,6 +55,8 @@ function SettingsBody() {
           <Icon name="x" />
         </button>
       </div>
+
+      <ProSettings />
 
       <section className="settings-group">
         <h3 className="section-label">Appearance</h3>

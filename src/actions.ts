@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { usePlanner } from './state';
 import { useCalendar } from './calendar';
+import { usePro } from './pro/ProProvider';
+import { canAddRepeat, FREE_REPEAT_LIMIT } from './pro/entitlement';
 import { type Task, makeTask, occurrencesOn, inboxTasks } from './lib/model';
 import { findSlot, autoPlan } from './lib/layout';
 import { parseQuickAdd } from './lib/parse';
@@ -11,6 +13,7 @@ export function usePlanActions() {
   const { data, dispatch, selected, today, now, toast, undo } = usePlanner();
   const { dayStart, dayEnd, use24h } = data.settings;
   const { eventsOn } = useCalendar();
+  const { isPro, require, openPaywall } = usePro();
 
   const earliestOn = useCallback(
     (day: DateKey) => (day === today ? Math.max(dayStart, Math.ceil(minutesNow(now))) : dayStart),
@@ -41,6 +44,7 @@ export function usePlanActions() {
 
   /** Fill free time on the selected day with inbox tasks, highest priority first. */
   const autoPlanDay = useCallback(() => {
+    if (!require('autoplan')) return;
     const day = diffDays(selected, today) < 0 ? today : selected;
     const queue = inboxTasks(data.tasks);
     if (!queue.length) {
@@ -61,7 +65,7 @@ export function usePlanActions() {
     dispatch({ type: 'scheduleMany', items: placed.map((p) => ({ ...p, date: day })) });
     const rest = unplaced.length ? ` · ${unplaced.length} didn’t fit` : '';
     toast(`Planned ${placed.length} task${placed.length === 1 ? '' : 's'} ${dayLabel(day)}${rest}`, { action: { label: 'Undo', run: undo } });
-  }, [data.tasks, selected, today, earliestOn, dayEnd, dispatch, toast, undo, use24h, dayLabel, eventsOn]);
+  }, [data.tasks, selected, today, earliestOn, dayEnd, dispatch, toast, undo, use24h, dayLabel, eventsOn, require]);
 
   /** Natural-language add. Returns the created task, or null when the title is empty. */
   const addFromText = useCallback(
@@ -69,13 +73,18 @@ export function usePlanActions() {
       const p = parseQuickAdd(text, today);
       if (!p.title) return null;
       const scheduled = p.start !== null;
+      let repeat = scheduled ? p.repeat : 'none';
+      if (repeat !== 'none' && !canAddRepeat(data.tasks, null, isPro)) {
+        repeat = 'none';
+        toast(`Free includes ${FREE_REPEAT_LIMIT} routines. Added once instead.`, { action: { label: 'Go Pro', run: () => openPaywall('repeats') } });
+      }
       const task = makeTask({
         ...defaults,
         title: p.title,
         priority: p.priority,
         category: p.category ?? defaults.category ?? 'work',
         duration: p.duration ?? defaults.duration ?? (scheduled ? 60 : 30),
-        repeat: scheduled ? p.repeat : 'none',
+        repeat,
         date: scheduled ? p.date : null,
         start: scheduled ? p.start : null,
         due: scheduled ? null : p.date,
@@ -83,7 +92,7 @@ export function usePlanActions() {
       dispatch({ type: 'add', task });
       return task;
     },
-    [today, dispatch],
+    [today, dispatch, data.tasks, isPro, toast, openPaywall],
   );
 
   return { scheduleNext, autoPlanDay, addFromText, dayLabel };

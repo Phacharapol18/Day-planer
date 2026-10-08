@@ -13,8 +13,10 @@ describe('buildSnapshot', () => {
       makeTask({ title: 'Inbox thing' }),
     ];
     const ev: ExternalEvent = { id: 'e1@2026-10-09', title: 'Sync', date: '2026-10-09', start: 540, end: 570, color: 0x112233, calendar: 'Work', location: '', allDay: false };
-    const s = buildSnapshot(tasks, { ...DEFAULT_SETTINGS, notify: true, use24h: true }, TODAY, (d) => (d === '2026-10-09' ? [ev] : []));
-    expect(s).toMatchObject({ v: 1, reminders: true, use24h: true, leadMinutes: 5, nowCard: true, inboxCount: 1 });
+    const s = buildSnapshot(tasks, { ...DEFAULT_SETTINGS, notify: true, use24h: true }, TODAY, (d) => (d === '2026-10-09' ? [ev] : []), true);
+    expect(s).toMatchObject({ v: 1, reminders: true, use24h: true, leadMinutes: 5, nowCard: true, pro: true, inboxCount: 1 });
+    // Free users: no Now card regardless of the setting.
+    expect(buildSnapshot(tasks, DEFAULT_SETTINGS, TODAY, () => [])).toMatchObject({ nowCard: false, pro: false });
     // Daily run: anchor is today, so it appears today, +1, +2 (not yesterday). Plus the event.
     expect(s.items.map((i) => `${i.date}:${i.title}:${i.done}`)).toEqual([
       '2026-10-08:Run:true',

@@ -34,7 +34,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:letterSpacing="0.12"
-                android:text="NOW"
+                android:text="@string/now_label"
+                android:textAllCaps="true"
                 android:textColor="@color/accent"
                 android:textSize="11sp"
                 android:textStyle="bold" />

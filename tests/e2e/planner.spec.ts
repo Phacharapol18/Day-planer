@@ -4,7 +4,7 @@ const NOW = new Date(2026, 9, 8, 10, 0, 0); // Thu Oct 8 2026, 10:00 local
 const TODAY = '2026-10-08';
 const HOUR = 72; // default px per hour
 
-async function boot(page: Page, seed?: { tasks?: unknown[]; legacy?: unknown }) {
+async function boot(page: Page, seed?: { tasks?: unknown[]; legacy?: unknown; pro?: boolean }) {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => {
@@ -18,6 +18,7 @@ async function boot(page: Page, seed?: { tasks?: unknown[]; legacy?: unknown }) 
       localStorage.clear();
       if (s?.tasks) localStorage.setItem('dayplanner:v1', JSON.stringify({ version: 1, tasks: s.tasks, settings: {} }));
       if (s?.legacy) localStorage.setItem('saveArr', JSON.stringify(s.legacy));
+      if (s?.pro) localStorage.setItem('dayplanner:pro', JSON.stringify({ active: true, source: 'dev', plan: 'yearly', willCancel: false, inTrial: false, expiresAt: null, checkedAt: Date.now() }));
     },
     [seed ?? null] as const,
   );
@@ -102,7 +103,7 @@ test.describe('desktop', () => {
   });
 
   test('inbox: add, schedule into next free slot, auto-plan around existing blocks', async ({ page }) => {
-    await boot(page, { tasks: [task({ title: 'Existing', date: TODAY, start: 600, duration: 60 })] });
+    await boot(page, { tasks: [task({ title: 'Existing', date: TODAY, start: 600, duration: 60 })], pro: true });
     const input = page.getByTestId('inbox-input');
     await input.fill('Taxes 30m !!!');
     await input.press('Enter');
@@ -297,7 +298,7 @@ test.describe('desktop', () => {
     const backup = await (await dl.createReadStream()).toArray();
     const json = JSON.parse(Buffer.concat(backup).toString());
     expect(json.tasks[0].title).toBe('Gym');
-    const [ics] = await Promise.all([page.waitForEvent('download'), s.getByRole('button', { name: /calendar/ }).click()]);
+    const [ics] = await Promise.all([page.waitForEvent('download'), s.getByRole('button', { name: /Export to calendar/ }).click()]);
     const icsText = Buffer.concat(await (await ics.createReadStream()).toArray()).toString();
     expect(icsText).toContain('SUMMARY:Gym');
     expect(icsText).toContain('DTSTART:20261008T180000');
@@ -377,7 +378,7 @@ test.describe('phone calendar events', () => {
         { id: 'trip', title: 'Company offsite', begin: Date.UTC(2026, 9, 8), end: Date.UTC(2026, 9, 9), allDay: true, calendar: 'Work' },
       ];
     });
-    await boot(page, { tasks: [task({ title: 'Write spec', duration: 60, priority: 3 }), task({ title: 'Quick call', duration: 30 })] });
+    await boot(page, { tasks: [task({ title: 'Write spec', duration: 60, priority: 3 }), task({ title: 'Quick call', duration: 30 })], pro: true });
     const ev = page.getByTestId('event');
     await expect(ev).toHaveCount(2);
     await expect(ev.first()).toHaveAttribute('aria-label', /Team standup, 10am – 10:30am, from Work/);
@@ -392,5 +393,55 @@ test.describe('phone calendar events', () => {
     await page.getByRole('button', { name: 'Auto-plan' }).click();
     await expect(block(page, 'Write spec')).toHaveAttribute('aria-label', /10:30am – 11:30am/);
     await expect(block(page, 'Quick call')).toHaveAttribute('aria-label', /11:30am – 12pm/);
+  });
+});
+
+test.describe('Pro', () => {
+  test.skip(({ isMobile }) => isMobile, 'desktop-only');
+
+  test('free users hit a contextual paywall on Auto-plan; web points to the Android app', async ({ page }) => {
+    await boot(page, { tasks: [task({ title: 'Inbox task', duration: 30 })] });
+    await expect(page.getByRole('button', { name: /Auto-plan/ })).toContainText('Pro');
+    await page.getByRole('button', { name: /Auto-plan/ }).click();
+    const pw = page.getByTestId('paywall');
+    await expect(pw).toBeVisible();
+    await expect(pw.getByRole('heading')).toHaveText('Let your day plan itself.');
+    await expect(pw.locator('.pw-features li').first()).toContainText('Auto-plan');
+    await expect(pw.getByRole('link', { name: 'Get it on Google Play' })).toHaveAttribute('href', /play\.google\.com.*com\.phacharapol\.dayplanner/);
+    await page.keyboard.press('Escape');
+    // Nothing got scheduled.
+    await expect(page.getByTestId('block')).toHaveCount(0);
+    await expect(page.getByTestId('inbox-item')).toHaveCount(1);
+  });
+
+  test('free plan allows 3 routines; the 4th is added once with an upgrade prompt', async ({ page }) => {
+    const rep = (i: number) => task({ title: `Routine ${i}`, date: TODAY, start: 6 * 60 + i * 30, duration: 15, repeat: 'daily' });
+    await boot(page, { tasks: [rep(1), rep(2), rep(3)] });
+    await page.keyboard.press('Control+k');
+    await page.getByTestId('quickadd-input').fill('Stretch 7pm 15m daily');
+    await page.getByTestId('quickadd-input').press('Enter');
+    await expect(page.getByTestId('toast').filter({ hasText: 'Free includes 3 routines' })).toBeVisible();
+    await page.keyboard.press('ArrowRight');
+    await expect(block(page, 'Stretch')).toHaveCount(0); // not repeating
+    await page.keyboard.press('t');
+    // Editor: choosing a repeat on a new block opens the paywall instead.
+    await block(page, 'Stretch').click();
+    await page.getByLabel('Repeat').selectOption('daily');
+    await expect(page.getByTestId('paywall')).toBeVisible();
+    await expect(page.getByTestId('paywall').getByRole('heading')).toHaveText('Build routines that run themselves.');
+  });
+
+  test('Pro users see no gates and an active status in Settings', async ({ page }) => {
+    await boot(page, { pro: true });
+    await expect(page.getByTestId('go-pro')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByText('Pro is active')).toBeVisible();
+    await expect(page.getByText('Developer unlock')).toBeVisible();
+  });
+
+  test('Go Pro in the header opens the general paywall', async ({ page }) => {
+    await boot(page);
+    await page.getByTestId('go-pro').click();
+    await expect(page.getByTestId('paywall').getByRole('heading')).toHaveText('Plan your day like you mean it.');
   });
 });

@@ -4,6 +4,8 @@ import { type Task, type Priority, type Repeat, CATEGORIES, REPEAT_LABEL, PRIORI
 import { formatDuration, inputToTime, timeToInput, monthDay, todayKey } from '../lib/time';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
+import { usePro } from '../pro/ProProvider';
+import { canAddRepeat } from '../pro/entitlement';
 
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 
@@ -27,6 +29,7 @@ export function Editor() {
 
 function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: boolean; occurrenceDate: string | null }) {
   const { dispatch, setEditor, toast, undo, selected, data } = usePlanner();
+  const { isPro, openPaywall } = usePro();
   const [t, setT] = useState<Task>(source);
   const [scheduled, setScheduled] = useState(isScheduled(source));
   const [timeText, setTimeText] = useState(timeToInput(source.start ?? data.settings.dayStart));
@@ -209,7 +212,17 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
         {scheduled && (
           <label className="field">
             <span className="field-label">Repeat</span>
-            <select value={t.repeat} onChange={(e) => set('repeat', e.target.value as Repeat)}>
+            <select
+              value={t.repeat}
+              onChange={(e) => {
+                const r = e.target.value as Repeat;
+                if (r !== 'none' && !canAddRepeat(data.tasks, isNew ? null : t.id, isPro)) {
+                  openPaywall('repeats');
+                  return;
+                }
+                set('repeat', r);
+              }}
+            >
               {(Object.keys(REPEAT_LABEL) as Repeat[]).map((r) => (
                 <option key={r} value={r}>
                   {REPEAT_LABEL[r]}

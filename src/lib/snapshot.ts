@@ -9,6 +9,8 @@ export interface NativeSnapshot {
   reminders: boolean;
   leadMinutes: number;
   nowCard: boolean;
+  /** Pro unlocks widgets and the Now card natively. */
+  pro: boolean;
   inboxCount: number;
   items: {
     id: string;
@@ -27,7 +29,7 @@ export interface NativeSnapshot {
  * Yesterday through the day after tomorrow: enough for widgets and alarms to stay correct across
  * midnight and for a couple of days if the app isn't opened.
  */
-export function buildSnapshot(tasks: Task[], settings: Settings, today: DateKey, eventsOn: (d: DateKey) => ExternalEvent[]): NativeSnapshot {
+export function buildSnapshot(tasks: Task[], settings: Settings, today: DateKey, eventsOn: (d: DateKey) => ExternalEvent[], pro = false): NativeSnapshot {
   const items: NativeSnapshot['items'] = [];
   for (let i = -1; i <= 2; i++) {
     const d = addDays(today, i);
@@ -44,7 +46,8 @@ export function buildSnapshot(tasks: Task[], settings: Settings, today: DateKey,
     use24h: settings.use24h,
     reminders: settings.notify,
     leadMinutes: settings.leadMinutes,
-    nowCard: settings.nowCard,
+    nowCard: settings.nowCard && pro,
+    pro,
     inboxCount: inboxTasks(tasks).length,
     items,
   };

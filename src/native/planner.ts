@@ -20,6 +20,8 @@ export interface NativeStatus {
   exactAlarms: boolean;
   calendar: boolean;
   sdk: number;
+  /** Debuggable (non-release) build. */
+  debug?: boolean;
 }
 
 interface PlannerPlugin {

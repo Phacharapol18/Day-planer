@@ -53,6 +53,11 @@ public final class Widgets {
             RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_now);
             v.setOnClickPendingIntent(R.id.w_root, Notifier.openApp(ctx, cur != null ? "focus" : "today", 20));
             v.setOnClickPendingIntent(R.id.w_add, Notifier.openApp(ctx, "quickadd", 21));
+            if (!s.pro) {
+                locked(ctx, v);
+                mgr.updateAppWidget(id, v);
+                continue;
+            }
             if (cur != null) {
                 v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.now_label).toUpperCase(Locale.getDefault()));
                 v.setTextViewText(R.id.w_title, cur.title.isEmpty() ? ctx.getString(R.string.untitled) : cur.title);
@@ -95,6 +100,19 @@ public final class Widgets {
         }
     }
 
+    /** Free users see an invitation instead of their plan; tapping opens the paywall. */
+    private static void locked(Context ctx, RemoteViews v) {
+        v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.pro_label));
+        v.setTextViewText(R.id.w_title, ctx.getString(R.string.widget_locked_title));
+        v.setTextViewText(R.id.w_meta, ctx.getString(R.string.widget_locked_sub));
+        v.setInt(R.id.w_rail, "setBackgroundColor", ContextCompat.getColor(ctx, R.color.accent));
+        v.setViewVisibility(R.id.w_timer, View.GONE);
+        v.setViewVisibility(R.id.w_progress, View.GONE);
+        v.setViewVisibility(R.id.w_done, View.GONE);
+        v.setViewVisibility(R.id.w_next, View.GONE);
+        v.setOnClickPendingIntent(R.id.w_root, Notifier.openApp(ctx, "pro", 22));
+    }
+
     static String relativeStart(Context ctx, long start, long now, boolean use24h) {
         long mins = Math.max(0, (start - now) / 60_000L);
         String at = PlannerStore.formatTime(start, use24h);
@@ -119,6 +137,18 @@ public final class Widgets {
         for (int id : ids) {
             RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_agenda);
             v.setTextViewText(R.id.a_date, header);
+            if (!s.pro) {
+                v.setTextViewText(R.id.a_meta, ctx.getString(R.string.pro_label));
+                v.setTextViewText(R.id.a_empty, ctx.getString(R.string.widget_locked_title) + "\n" + ctx.getString(R.string.widget_locked_sub));
+                v.setViewVisibility(R.id.a_list, View.GONE);
+                v.setViewVisibility(R.id.a_empty, View.VISIBLE);
+                v.setOnClickPendingIntent(R.id.a_header, Notifier.openApp(ctx, "pro", 34));
+                v.setOnClickPendingIntent(R.id.a_empty, Notifier.openApp(ctx, "pro", 35));
+                v.setOnClickPendingIntent(R.id.a_add, Notifier.openApp(ctx, "quickadd", 31));
+                mgr.updateAppWidget(id, v);
+                continue;
+            }
+            v.setViewVisibility(R.id.a_list, View.VISIBLE);
             v.setTextViewText(R.id.a_meta, todays == 0 ? ctx.getString(R.string.nothing_planned) : ctx.getString(R.string.done_of, done, todays)
                     + (s.inboxCount > 0 ? " · " + ctx.getString(R.string.inbox_count, s.inboxCount) : ""));
             v.setOnClickPendingIntent(R.id.a_header, Notifier.openApp(ctx, "today", 30));
