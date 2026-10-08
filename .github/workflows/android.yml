@@ -82,6 +82,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Playwright's Android driver (drives the WebView and taps notification buttons).
+      - run: npx playwright install android
       - uses: actions/download-artifact@v4
         with:
           name: app-debug-apk

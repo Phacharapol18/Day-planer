@@ -25,7 +25,26 @@ export interface Task {
   doneOn: DateKey[];
   /** Occurrences removed from a repeating series. */
   skipOn: DateKey[];
+  /** Optional checklist (routines: "brush teeth → coffee → pack bag"). */
+  steps: Step[];
+  /** Checked step ids per occurrence date. */
+  stepsDone: Record<DateKey, string[]>;
   createdAt: number;
+}
+
+export interface Step {
+  id: string;
+  text: string;
+}
+
+/** Per-day ritual record: morning plan, highlight, evening shutdown and reflection. */
+export interface DayEntry {
+  planned?: number;
+  shutdown?: number;
+  mood?: 1 | 2 | 3 | 4 | 5;
+  /** The one thing that would make the day a win (task id). */
+  highlight?: string;
+  note?: string;
 }
 
 export type Theme = 'system' | 'light' | 'dark';
@@ -52,6 +71,7 @@ export interface PlannerData {
   version: 1;
   tasks: Task[];
   settings: Settings;
+  journal: Record<DateKey, DayEntry>;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -115,6 +135,8 @@ export function makeTask(partial: Partial<Task> & { title: string }): Task {
     done: false,
     doneOn: [],
     skipOn: [],
+    steps: [],
+    stepsDone: {},
     createdAt: Date.now(),
     ...partial,
   };

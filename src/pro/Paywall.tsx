@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog } from '../components/Dialog';
 import { Icon, type IconName } from '../components/Icon';
 import { usePlanner } from '../state';
-import { usePro, PLAY_URL } from './ProProvider';
+import { usePro, PLAY_URL, SITE_URL } from './ProProvider';
 import { PRO_FEATURES, type ProFeature, type ProPlan } from './entitlement';
 
 const HEADLINES: Record<ProFeature | 'default', string> = {
@@ -145,7 +145,7 @@ function PaywallBody() {
         </div>
       )}
       <p className="pw-legal">
-        <a href="privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href={`${SITE_URL}privacy.html`} target="_blank" rel="noopener noreferrer">Privacy</a> · <a href={`${SITE_URL}terms.html`} target="_blank" rel="noopener noreferrer">Terms</a>
       </p>
     </div>
   );

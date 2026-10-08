@@ -17,6 +17,7 @@ import { Icon } from './components/Icon';
 import { CalendarProvider } from './calendar';
 import { ProProvider } from './pro/ProProvider';
 import { Paywall } from './pro/Paywall';
+import { Ritual } from './components/Ritual';
 import { useNativeBridge, haptic } from './native/bridge';
 import { isNative } from './native/planner';
 
@@ -97,6 +98,7 @@ function Shell() {
       <Settings />
       <Help />
       <Focus />
+      <Ritual />
       <Paywall />
       <Toasts />
       <UpdatePrompt />

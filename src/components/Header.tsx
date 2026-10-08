@@ -6,12 +6,19 @@ import { addDays, diffDays, fromKey, monthDay, weekday, weekdayName, formatDurat
 import { Icon } from './Icon';
 import { useCalendar } from '../calendar';
 import { usePro } from '../pro/ProProvider';
+import { streak } from '../lib/journal';
 
 export function Header() {
   const { data, selected, setSelected, today, now, setPanel } = usePlanner();
   const { dayStart, dayEnd } = data.settings;
   const { eventsOn } = useCalendar();
   const { isPro, openPaywall } = usePro();
+  const entry = data.journal[today];
+  const hour = now.getHours();
+  // Offer the ritual that fits the moment: plan in the morning, close the day in the evening.
+  const ritual: 'plan' | 'shutdown' | null = selected !== today ? null : hour >= 16 && !entry?.shutdown ? 'shutdown' : hour < 16 && !entry?.planned ? 'plan' : null;
+  const currentStreak = useMemo(() => streak(data.journal, today), [data.journal, today]);
+  const highlightTask = data.journal[selected]?.highlight ? data.tasks.find((t) => t.id === data.journal[selected]!.highlight) : undefined;
 
   // Week starts on Monday.
   const weekStart = addDays(selected, -((weekday(selected) + 6) % 7));
@@ -58,6 +65,11 @@ export function Header() {
           </h1>
         </div>
         <div className="masthead-actions">
+          {ritual && (
+            <button type="button" className="btn btn--quiet ritual-btn" onClick={() => setPanel(ritual)} data-testid="ritual-cta">
+              <Icon name={ritual === 'plan' ? 'sun' : 'check'} size={16} /> <span className="hide-sm">{ritual === 'plan' ? 'Plan day' : 'Shut down'}</span>
+            </button>
+          )}
           <button type="button" className="btn btn--primary" onClick={() => setPanel('quickadd')} aria-keyshortcuts="Control+K Meta+K N">
             <Icon name="plus" size={16} /> <span className="hide-sm">Add</span>
             <kbd className="hide-sm">⌘K</kbd>
@@ -141,7 +153,17 @@ export function Header() {
             </>
           )}
         </p>
+        {currentStreak > 0 && (
+          <span className="streak-chip" title="Days in a row you planned or closed your day" data-testid="streak">
+            <Icon name="flag" size={13} /> {currentStreak}-day streak
+          </span>
+        )}
       </div>
+      {highlightTask && (
+        <p className="highlight-line" data-testid="highlight">
+          <Icon name="flag" size={14} /> <span>Today’s one thing:</span> <strong>{highlightTask.title}</strong>
+        </p>
+      )}
     </header>
   );
 }

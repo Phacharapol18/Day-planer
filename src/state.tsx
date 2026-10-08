@@ -15,7 +15,7 @@ export type EditorTarget =
   | { mode: 'new'; draft: Task }
   | { mode: 'edit'; id: string; date: DateKey | null };
 
-export type Panel = null | 'quickadd' | 'settings' | 'help' | 'focus';
+export type Panel = null | 'quickadd' | 'settings' | 'help' | 'focus' | 'plan' | 'shutdown';
 
 interface PlannerApi {
   data: PlannerData;
@@ -113,7 +113,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }, [today]);
 
   // Persist; remember what we wrote so our own storage events are not treated as foreign.
-  const lastWritten = useRef<string>('');
+  // Seed with what we just loaded: a tab that merely opened must not re-save, or it can overwrite a
+  // change another tab made in the meantime (and the storage event would spread the stale copy).
+  // Only a migration or a recovery needs an immediate write.
+  const lastWritten = useRef<string>(initial.imported || initial.corrupt ? '' : JSON.stringify(initial.data));
   const saveFailed = useRef(false);
   useEffect(() => {
     if (!storage) return;

@@ -1,4 +1,4 @@
-import { type PlannerData, type Settings, type Task, newId, isScheduled } from './model';
+import { type PlannerData, type Settings, type Task, type DayEntry, newId, isScheduled } from './model';
 import { type DateKey, clamp, MINUTES_PER_DAY } from './time';
 
 export type Action =
@@ -13,6 +13,8 @@ export type Action =
   | { type: 'delete'; id: string }
   | { type: 'skipOccurrence'; id: string; date: DateKey }
   | { type: 'duplicate'; id: string; date: DateKey }
+  | { type: 'journal'; date: DateKey; patch: Partial<DayEntry> }
+  | { type: 'toggleStep'; id: string; date: DateKey; stepId: string }
   | { type: 'settings'; patch: Partial<Settings> }
   | { type: 'replace'; data: PlannerData };
 
@@ -92,6 +94,14 @@ export function reduce(data: PlannerData, action: Action): PlannerData {
       };
       return { ...data, tasks: [...data.tasks, copy] };
     }
+    case 'journal':
+      return { ...data, journal: { ...data.journal, [action.date]: { ...data.journal[action.date], ...action.patch } } };
+    case 'toggleStep':
+      return mapTask(data, action.id, (t) => {
+        const cur = t.stepsDone[action.date] ?? [];
+        const next = cur.includes(action.stepId) ? cur.filter((s) => s !== action.stepId) : [...cur, action.stepId];
+        return { ...t, stepsDone: { ...t.stepsDone, [action.date]: next } };
+      });
     case 'settings':
       return { ...data, settings: { ...data.settings, ...action.patch } };
     case 'replace':

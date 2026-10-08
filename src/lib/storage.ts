@@ -1,4 +1,4 @@
-import { type PlannerData, type Task, DEFAULT_SETTINGS, makeTask, CATEGORIES, type Priority, type Repeat } from './model';
+import { type PlannerData, type Task, type DayEntry, DEFAULT_SETTINGS, makeTask, CATEGORIES, type Priority, type Repeat } from './model';
 import { type DateKey, inputToTime } from './time';
 
 export const STORAGE_KEY = 'dayplanner:v1';
@@ -6,7 +6,7 @@ export const STORAGE_KEY = 'dayplanner:v1';
 export const LEGACY_KEY = 'saveArr';
 
 export function emptyData(): PlannerData {
-  return { version: 1, tasks: [], settings: { ...DEFAULT_SETTINGS } };
+  return { version: 1, tasks: [], settings: { ...DEFAULT_SETTINGS }, journal: {} };
 }
 
 const CATEGORY_IDS = new Set(CATEGORIES.map((c) => c.id));
@@ -35,8 +35,38 @@ export function sanitizeTask(raw: unknown): Task | null {
     done: r.done === true,
     doneOn: Array.isArray(r.doneOn) ? r.doneOn.filter(isKey) : [],
     skipOn: Array.isArray(r.skipOn) ? r.skipOn.filter(isKey) : [],
+    steps: Array.isArray(r.steps)
+      ? r.steps
+          .filter((x): x is { id: string; text: string } => !!x && typeof (x as { id?: unknown }).id === 'string' && typeof (x as { text?: unknown }).text === 'string')
+          .slice(0, 50)
+          .map((x) => ({ id: x.id, text: x.text.slice(0, 200) }))
+      : [],
+    stepsDone: sanitizeDayMap(r.stepsDone, (v) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : null)),
     createdAt: typeof r.createdAt === 'number' ? r.createdAt : Date.now(),
   };
+}
+
+function sanitizeDayMap<T>(raw: unknown, fn: (v: unknown) => T | null): Record<DateKey, T> {
+  const out: Record<DateKey, T> = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!isKey(k)) continue;
+    const t = fn(v);
+    if (t !== null) out[k] = t;
+  }
+  return out;
+}
+
+function sanitizeEntry(v: unknown): DayEntry | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const e: DayEntry = {};
+  if (typeof o.planned === 'number') e.planned = o.planned;
+  if (typeof o.shutdown === 'number') e.shutdown = o.shutdown;
+  if ([1, 2, 3, 4, 5].includes(o.mood as number)) e.mood = o.mood as DayEntry['mood'];
+  if (typeof o.highlight === 'string') e.highlight = o.highlight;
+  if (typeof o.note === 'string') e.note = o.note.slice(0, 2000);
+  return e;
 }
 
 export function sanitizeData(raw: unknown): PlannerData | null {
@@ -54,6 +84,7 @@ export function sanitizeData(raw: unknown): PlannerData | null {
     tasks: r.tasks
       .map(sanitizeTask)
       .filter((t): t is Task => !!t && !seen.has(t.id) && !!seen.add(t.id)),
+    journal: sanitizeDayMap(r.journal, sanitizeEntry),
     settings: {
       theme: s.theme === 'light' || s.theme === 'dark' ? s.theme : 'system',
       use24h: s.use24h === true,

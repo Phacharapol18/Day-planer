@@ -98,6 +98,9 @@ html.is-dragging * {
   white-space: nowrap;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.08s;
 }
+a.btn {
+  text-decoration: none;
+}
 .btn:active:not(:disabled) {
   transform: translateY(1px);
 }
@@ -1817,6 +1820,356 @@ button.pro-card:hover {
   color: var(--ink-2);
 }
 
+/* Rituals */
+.ritual {
+  width: min(560px, calc(100vw - 24px));
+}
+.rt {
+  display: grid;
+  gap: 12px;
+}
+.rt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -6px -8px -4px 0;
+}
+.rt-kicker {
+  margin: 0;
+  font: 700 11px/1 var(--font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rt-steps {
+  display: flex;
+  gap: 4px;
+}
+.rt-steps span {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  transition: background 0.3s;
+}
+.rt-steps span.is-on {
+  background: var(--ink);
+}
+.rt-title {
+  margin: 6px 0 0;
+  font: 600 26px/1.15 var(--font-display);
+  letter-spacing: -0.02em;
+}
+.rt-sub {
+  margin: -4px 0 4px;
+  color: var(--muted);
+}
+.rt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 46dvh;
+  overflow-y: auto;
+}
+.rt-row,
+.rt-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  text-align: left;
+}
+.rt-pick {
+  cursor: pointer;
+  border: 1.5px solid transparent;
+}
+.rt-pick:has(input:checked),
+.rt-pick--radio.is-on {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+.rt-pick input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ink);
+  flex: none;
+}
+.rt-pick--radio.is-on svg {
+  color: var(--accent);
+}
+.rt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cat);
+  flex: none;
+}
+.rt-row-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.rt-row-title small {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+.rt-row-meta {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.rt-actions {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.rt-actions .chip-btn {
+  height: 28px;
+  padding: 0 9px;
+  font-size: 12.5px;
+}
+.rt-empty {
+  padding: 14px;
+  border-radius: 11px;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  text-align: center;
+}
+.rt-meter {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+.rt-meter span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease), background 0.3s;
+}
+.rt-meter.is-over span {
+  background: var(--accent);
+}
+.rt-meter-text {
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rt-meter-text strong {
+  color: var(--ink);
+}
+.rt-meter-text em {
+  color: var(--accent);
+  font-style: normal;
+}
+.rt-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.rt-highlight {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+}
+.rt-highlight.is-done {
+  background: color-mix(in oklab, var(--ok) 14%, transparent);
+}
+.rt-moods {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.rt-mood {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px 4px 10px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line-strong);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--ink-2);
+}
+.rt-mood-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--mood);
+}
+.rt-mood[data-mood='1'] { --mood: #b54a3c; }
+.rt-mood[data-mood='2'] { --mood: #c9853a; }
+.rt-mood[data-mood='3'] { --mood: #b9aa52; }
+.rt-mood[data-mood='4'] { --mood: #6aa463; }
+.rt-mood[data-mood='5'] { --mood: #2f8a57; }
+.rt-mood.is-on {
+  border-color: var(--mood);
+  background: color-mix(in oklab, var(--mood) 12%, var(--surface));
+  color: var(--ink);
+}
+.rt-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+}
+.ritual-btn {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+.ritual-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+.streak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: color-mix(in oklab, var(--accent) 85%, var(--ink));
+  font: 650 12px/1.4 var(--font-ui);
+  white-space: nowrap;
+}
+.highlight-line {
+  margin: -6px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.highlight-line svg {
+  color: var(--accent);
+}
+.highlight-line strong {
+  color: var(--ink);
+}
+.block.is-highlight {
+  box-shadow: inset 3px 0 0 var(--cat), 0 0 0 1.5px var(--accent), var(--shadow-sm);
+}
+.block-flag {
+  color: var(--accent);
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.is-highlight-on {
+  color: var(--accent);
+}
+
+/* Steps */
+.field-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 11px;
+}
+.steps-edit {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.steps-edit li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.steps-num {
+  width: 20px;
+  text-align: right;
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.steps-edit input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  outline: none;
+}
+.steps-edit input:focus {
+  border-color: var(--focus);
+}
+.steps-edit .icon-btn {
+  width: 30px;
+  height: 30px;
+}
+.steps-add {
+  justify-self: start;
+  margin-left: 20px;
+}
+.focus-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  width: min(420px, 100%);
+  text-align: left;
+}
+.focus-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-weight: 550;
+  text-align: left;
+}
+.focus-step.is-next {
+  border-color: var(--cat);
+  box-shadow: 0 0 0 1px var(--cat);
+}
+.focus-step.is-done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.focus-step-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--faint);
+  color: transparent;
+  flex: none;
+}
+.focus-step.is-done .focus-step-check {
+  background: var(--cat);
+  border-color: var(--cat);
+  color: #fff;
+}
+
 /* Help */
 .help {
   width: min(720px, calc(100vw - 32px));
@@ -2206,7 +2559,8 @@ button.pro-card:hover {
   .dialog.editor,
   .dialog.settings,
   .dialog.help,
-  .dialog.paywall {
+  .dialog.paywall,
+  .dialog.ritual {
     width: 100vw;
     max-width: none;
     margin: auto 0 0;
@@ -2217,7 +2571,8 @@ button.pro-card:hover {
   .dialog.editor[open],
   .dialog.settings[open],
   .dialog.help[open],
-  .dialog.paywall[open] {
+  .dialog.paywall[open],
+  .dialog.ritual[open] {
     animation: sheet-in 0.26s var(--ease);
   }
   .quickadd {

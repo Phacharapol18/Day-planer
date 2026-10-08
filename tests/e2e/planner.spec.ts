@@ -445,3 +445,89 @@ test.describe('Pro', () => {
     await expect(page.getByTestId('paywall').getByRole('heading')).toHaveText('Plan your day like you mean it.');
   });
 });
+
+test.describe('rituals', () => {
+  test.skip(({ isMobile }) => isMobile, 'desktop-only');
+
+  test('morning plan: clear loose ends, pick tasks, set a highlight, start a streak', async ({ page }) => {
+    await boot(page, {
+      tasks: [
+        task({ title: 'Old call', date: '2026-10-07', start: 16 * 60, duration: 15 }),
+        task({ title: 'Write proposal', duration: 90, priority: 3 }),
+        task({ title: 'Book flights', duration: 30 }),
+      ],
+      pro: true,
+    });
+    await page.getByTestId('ritual-cta').click();
+    const r = page.getByTestId('ritual-plan');
+    await expect(r.getByRole('heading')).toHaveText('Yesterday’s loose ends');
+    await r.getByRole('button', { name: 'Keep' }).click(); // back to inbox
+    await r.getByRole('button', { name: /Next/ }).click();
+    await expect(r.getByRole('heading')).toHaveText('What matters today?');
+    await r.getByText('Write proposal').click();
+    await r.getByText('Book flights').click();
+    await expect(r.locator('.rt-meter-text')).toContainText('2h picked');
+    await r.getByRole('button', { name: /Fit them into my day/ }).click();
+    await expect(r.getByRole('heading')).toHaveText('Your one thing');
+    await r.getByRole('radio', { name: /Write proposal/ }).click();
+    await page.getByTestId('ritual-finish').click();
+    await expect(page.getByTestId('toast').last()).toContainText('Day planned');
+    // Placed on the timeline after "now" (10:00), highlight marked everywhere.
+    await expect(block(page, 'Write proposal')).toHaveAttribute('aria-label', /10am – 11:30am.*today’s highlight/);
+    await expect(block(page, 'Book flights')).toHaveAttribute('aria-label', /11:30am – 12pm/);
+    await expect(page.getByTestId('highlight')).toContainText('Write proposal');
+    await expect(page.getByTestId('streak')).toHaveText(/1-day streak/);
+    await expect(page.getByTestId('ritual-cta')).toHaveCount(0);
+    await expect(page.getByTestId('inbox-item').filter({ hasText: 'Old call' })).toBeVisible();
+  });
+
+  test('evening shutdown: move leftovers to tomorrow, reflect, carry a note forward', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 9, 8, 18, 30));
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.addInitScript(
+      (tasks) => {
+        if (sessionStorage.getItem('__seeded')) return;
+        sessionStorage.setItem('__seeded', '1');
+        localStorage.clear();
+        localStorage.setItem('dayplanner:v1', JSON.stringify({ version: 1, tasks, settings: {}, journal: { '2026-10-07': { planned: 1 } } }));
+      },
+      [
+        task({ title: 'Shipped it', date: TODAY, start: 9 * 60, done: true }),
+        task({ title: 'Unfinished review', date: TODAY, start: 15 * 60, duration: 45 }),
+      ],
+    );
+    await page.goto('/');
+    await expect(page.getByTestId('ritual-cta')).toContainText('Shut down');
+    await page.getByTestId('ritual-cta').click();
+    const r = page.getByTestId('ritual-shutdown');
+    await expect(r.getByRole('heading')).toHaveText('1 done today.');
+    await r.getByRole('button', { name: 'Tomorrow' }).click();
+    await r.getByRole('button', { name: /Next/ }).click();
+    await r.getByRole('radio', { name: 'Good' }).click();
+    await r.getByLabel('Tomorrow’s first thing (optional)').fill('Call the bank');
+    await r.getByLabel('Add it to my inbox for tomorrow').check();
+    await page.getByTestId('ritual-finish').click();
+    await expect(page.getByTestId('toast').last()).toContainText('2-day streak');
+    await expect(page.getByTestId('inbox-item').filter({ hasText: 'Call the bank' })).toContainText('Tmrw');
+    await page.keyboard.press('ArrowRight');
+    await expect(block(page, 'Unfinished review')).toHaveAttribute('aria-label', /3pm – 3:45pm/);
+    expect(errors).toEqual([]);
+  });
+
+  test('steps: edit a checklist and tick it off in focus mode', async ({ page }) => {
+    await boot(page, { tasks: [task({ title: 'Morning routine', date: TODAY, start: 9 * 60 + 45, duration: 45 })] });
+    await block(page, 'Morning routine').click();
+    await page.getByRole('button', { name: 'Add a step' }).click();
+    await page.keyboard.type('Water');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Stretch');
+    await page.getByTestId('editor-save').click();
+    await page.keyboard.press('f');
+    const focus = page.getByRole('dialog', { name: 'Focus mode' });
+    await expect(focus.getByRole('list', { name: 'Steps' })).toContainText('Water');
+    await focus.getByRole('button', { name: 'Water' }).click();
+    await expect(focus.getByRole('button', { name: 'Water' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(focus.getByRole('button', { name: 'Stretch' })).toHaveClass(/is-next/);
+  });
+});

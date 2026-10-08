@@ -71,6 +71,24 @@ function FocusBody() {
           </div>
         </div>
       )}
+      {current && current.task.steps.length > 0 && (
+        <ol className="focus-steps" aria-label="Steps">
+          {current.task.steps.map((st) => {
+            const done = (current.task.stepsDone[today] ?? []).includes(st.id);
+            const isNext = !done && current.task.steps.find((x) => !(current.task.stepsDone[today] ?? []).includes(x.id))?.id === st.id;
+            return (
+              <li key={st.id}>
+                <button type="button" className={`focus-step${done ? ' is-done' : ''}${isNext ? ' is-next' : ''}`} aria-pressed={done} onClick={() => dispatch({ type: 'toggleStep', id: current.task.id, date: today, stepId: st.id })}>
+                  <span className="focus-step-check" aria-hidden="true">
+                    <Icon name="check" size={13} />
+                  </span>
+                  {st.text}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
       {current?.task.notes && <p className="focus-notes">{current.task.notes}</p>}
       {current && (
         <div className="focus-actions">

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePlanner } from '../state';
-import { type Task, type Priority, type Repeat, CATEGORIES, REPEAT_LABEL, PRIORITY_LABEL, isScheduled } from '../lib/model';
+import { type Task, type Priority, type Repeat, CATEGORIES, REPEAT_LABEL, PRIORITY_LABEL, isScheduled, newId } from '../lib/model';
 import { formatDuration, inputToTime, timeToInput, monthDay, todayKey } from '../lib/time';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
@@ -35,6 +35,13 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
   const [timeText, setTimeText] = useState(timeToInput(source.start ?? data.settings.dayStart));
   const [customDur, setCustomDur] = useState(!DURATIONS.includes(source.duration));
   const titleRef = useRef<HTMLInputElement>(null);
+  const [focusStep, setFocusStep] = useState<string | null>(null);
+  // Focus a just-added step once React has rendered its input.
+  useEffect(() => {
+    if (!focusStep) return;
+    document.querySelector<HTMLInputElement>(`[data-step="${focusStep}"]`)?.focus();
+    setFocusStep(null);
+  }, [focusStep]);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setT((x) => ({ ...x, [k]: v }));
 
   useEffect(() => {
@@ -55,6 +62,7 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
     if (scheduled && start === null) return;
     const next: Task = {
       ...t,
+      steps: t.steps.map((x) => ({ ...x, text: x.text.trim() })).filter((x) => x.text),
       title,
       date: scheduled ? (t.date ?? selected) : null,
       start: scheduled ? start : null,
@@ -82,6 +90,7 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
   };
 
   const repeating = !isNew && source.repeat !== 'none';
+  const isHighlight = !isNew && data.journal[occurrenceDate ?? source.date ?? selected]?.highlight === source.id;
 
   return (
     <form
@@ -233,6 +242,49 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
         )}
       </div>
 
+      <fieldset className="field">
+        <legend className="field-label">Steps {t.steps.length > 0 && <span className="field-count">{t.steps.length}</span>}</legend>
+        <ol className="steps-edit">
+          {t.steps.map((st, i) => (
+            <li key={st.id}>
+              <span className="steps-num" aria-hidden="true">{i + 1}</span>
+              <input
+                value={st.text}
+                onChange={(e) => set('steps', t.steps.map((x) => (x.id === st.id ? { ...x, text: e.target.value } : x)))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const id = newId();
+                    set('steps', [...t.steps.slice(0, i + 1), { id, text: '' }, ...t.steps.slice(i + 1)]);
+                    setFocusStep(id);
+                  } else if (e.key === 'Backspace' && !st.text) {
+                    e.preventDefault();
+                    set('steps', t.steps.filter((x) => x.id !== st.id));
+                  }
+                }}
+                data-step={st.id}
+                aria-label={`Step ${i + 1}`}
+                maxLength={200}
+              />
+              <button type="button" className="icon-btn" onClick={() => set('steps', t.steps.filter((x) => x.id !== st.id))} aria-label={`Remove step ${i + 1}`}>
+                <Icon name="x" size={14} />
+              </button>
+            </li>
+          ))}
+        </ol>
+        <button
+          type="button"
+          className="btn btn--quiet btn--sm steps-add"
+          onClick={() => {
+            const id = newId();
+            set('steps', [...t.steps, { id, text: '' }]);
+            setFocusStep(id);
+          }}
+        >
+          <Icon name="plus" size={14} /> Add a step
+        </button>
+      </fieldset>
+
       <label className="field">
         <span className="field-label">Notes</span>
         <textarea value={t.notes} onChange={(e) => set('notes', e.target.value)} rows={3} placeholder="Links, agenda, the first small step…" />
@@ -255,6 +307,20 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
             ) : (
               <button type="button" className="btn btn--danger-quiet btn--sm" onClick={() => remove('all')} data-testid="editor-delete">
                 <Icon name="trash" size={15} /> Delete
+              </button>
+            )}
+            {scheduled && (
+              <button
+                type="button"
+                className={`btn btn--quiet btn--sm${isHighlight ? ' is-highlight-on' : ''}`}
+                aria-pressed={isHighlight}
+                onClick={() => {
+                  const day = occurrenceDate ?? t.date ?? selected;
+                  dispatch({ type: 'journal', date: day, patch: { highlight: isHighlight ? undefined : t.id } });
+                  toast(isHighlight ? 'Highlight cleared' : `“${t.title}” is the day’s one thing`);
+                }}
+              >
+                <Icon name="flag" size={15} /> {isHighlight ? 'Highlighted' : 'Make highlight'}
               </button>
             )}
             <button

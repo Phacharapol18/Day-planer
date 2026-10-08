@@ -117,11 +117,21 @@ await step('dayplanner://quickadd deep link opens quick add; back closes it', as
   sh('am start -a android.intent.action.VIEW -d dayplanner://quickadd');
   await page.getByTestId('quickadd-input').waitFor();
   writeFileSync(`${OUT}/03-quickadd.png`, await device.screenshot());
-  // First Back hides the keyboard (as for any Android app), the second closes quick add.
+  // Count Capacitor's DOM 'backbutton' events so a failure says whether Back reached the web layer.
+  await page.evaluate(() => {
+    window.__bb = 0;
+    document.addEventListener('backbutton', () => window.__bb++);
+  });
+  // First Back may only hide the keyboard (as in any Android app); press again if still open.
   sh('input keyevent 4');
-  await sleep(500);
-  if ((await page.getByTestId('quickadd-input').count()) > 0) sh('input keyevent 4');
-  await waitFor(async () => (await page.getByTestId('quickadd-input').count()) === 0, 'quick add closed by back');
+  await sleep(700);
+  if ((await page.getByTestId('quickadd-input').count()) > 0) {
+    sh('input keyevent 4');
+    await sleep(700);
+  }
+  const bb = await page.evaluate(() => window.__bb);
+  const ime = sh('dumpsys input_method | grep -m1 mInputShown || true').trim();
+  await waitFor(async () => (await page.getByTestId('quickadd-input').count()) === 0, `quick add closed by back (backbutton events=${bb}, ${ime})`, 5000);
 });
 
 await step('widgets and Quick Settings tile are registered', async () => {

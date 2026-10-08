@@ -6,6 +6,8 @@ import { type ProFeature, type ProPlan, type ProState, NO_PRO, PRO_PLANS, PRO_PR
 
 const CACHE_KEY = 'dayplanner:pro';
 export const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.phacharapol.dayplanner';
+/** Public site (legal pages). Absolute so links work from inside the Android WebView too. */
+export const SITE_URL = 'https://phacharapol18.github.io/Day-planer/';
 
 export interface PlanOffer {
   plan: ProPlan;

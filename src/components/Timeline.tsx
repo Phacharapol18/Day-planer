@@ -137,6 +137,7 @@ export function Timeline() {
               <Block
                 key={o.task.id}
                 occ={o}
+                highlight={data.journal[selected]?.highlight === o.task.id}
                 col={columns.get(o.task.id) ?? { col: 0, cols: 1 }}
                 pxPerMin={pxPerMin}
                 use24h={use24h}
@@ -254,6 +255,7 @@ const EventBlock = memo(function EventBlock({ ev, col, pxPerMin, use24h, past, o
 
 interface BlockProps {
   occ: Occurrence;
+  highlight: boolean;
   col: { col: number; cols: number };
   pxPerMin: number;
   use24h: boolean;
@@ -266,7 +268,7 @@ interface BlockProps {
   onDelete: () => void;
 }
 
-const Block = memo(function Block({ occ, col, pxPerMin, use24h, nowMin, ghosted, onEdit, onPointerDown, onToggle, onNudge, onDelete }: BlockProps) {
+const Block = memo(function Block({ occ, highlight, col, pxPerMin, use24h, nowMin, ghosted, onEdit, onPointerDown, onToggle, onNudge, onDelete }: BlockProps) {
   const { task, start, end, done } = occ;
   const height = Math.max((end - start) * pxPerMin, 18);
   const compact = height < 40;
@@ -307,7 +309,7 @@ const Block = memo(function Block({ occ, col, pxPerMin, use24h, nowMin, ghosted,
     <div
       role="button"
       tabIndex={0}
-      className={['block', compact && 'block--compact', done && 'is-done', past && !done && 'is-past', current && 'is-current', ghosted && 'is-ghosted'].filter(Boolean).join(' ')}
+      className={['block', highlight && 'is-highlight', compact && 'block--compact', done && 'is-done', past && !done && 'is-past', current && 'is-current', ghosted && 'is-ghosted'].filter(Boolean).join(' ')}
       data-cat={task.category}
       data-testid="block"
       data-id={task.id}
@@ -318,7 +320,7 @@ const Block = memo(function Block({ occ, col, pxPerMin, use24h, nowMin, ghosted,
         width: `calc(${widthPct}% - ${col.cols > 1 ? 6 : 12}px)`,
         ['--progress' as string]: progress,
       }}
-      aria-label={`${task.title || 'Untitled'}, ${timeLabel}${done ? ', done' : ''}${current ? ', happening now' : ''}`}
+      aria-label={`${task.title || 'Untitled'}, ${timeLabel}${done ? ', done' : ''}${current ? ', happening now' : ''}${highlight ? ', today’s highlight' : ''}`}
       aria-keyshortcuts="Enter Space ArrowUp ArrowDown Shift+ArrowUp Shift+ArrowDown Delete"
       onPointerDown={(e) => onPointerDown(e, 'move')}
       onKeyDown={onKeyDown}
@@ -337,7 +339,10 @@ const Block = memo(function Block({ occ, col, pxPerMin, use24h, nowMin, ghosted,
         <Icon name="check" size={12} />
       </button>
       <div className="block-body">
-        <span className="block-title">{task.title || 'Untitled'}</span>
+        <span className="block-title">
+          {highlight && <Icon name="flag" size={12} className="block-flag" />}
+          {task.title || 'Untitled'}
+        </span>
         <span className="block-time">
           {timeLabel} · {formatDuration(end - start)}
           {task.repeat !== 'none' && <Icon name="repeat" size={11} className="block-meta-icon" />}
