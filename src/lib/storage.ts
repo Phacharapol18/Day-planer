@@ -61,6 +61,9 @@ export function sanitizeData(raw: unknown): PlannerData | null {
       dayEnd: dayStart < dayEnd ? dayEnd : DEFAULT_SETTINGS.dayEnd,
       hourHeight: num(s.hourHeight, DEFAULT_SETTINGS.hourHeight, 40, 160),
       notify: s.notify === true,
+      leadMinutes: [0, 5, 10, 15, 30].includes(s.leadMinutes as number) ? (s.leadMinutes as number) : DEFAULT_SETTINGS.leadMinutes,
+      nowCard: s.nowCard !== false,
+      calendarIds: Array.isArray(s.calendarIds) ? s.calendarIds.filter((x): x is string => typeof x === 'string').slice(0, 50) : [],
     },
   };
 }

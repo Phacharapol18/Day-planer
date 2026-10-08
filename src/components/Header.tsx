@@ -4,10 +4,12 @@ import { occurrencesOn } from '../lib/model';
 import { mergeBusy } from '../lib/layout';
 import { addDays, diffDays, fromKey, monthDay, weekday, weekdayName, formatDuration, minutesNow, DAY_NAMES_SHORT, relativeDayName } from '../lib/time';
 import { Icon } from './Icon';
+import { useCalendar } from '../calendar';
 
 export function Header() {
   const { data, selected, setSelected, today, now, setPanel } = usePlanner();
   const { dayStart, dayEnd } = data.settings;
+  const { eventsOn } = useCalendar();
 
   // Week starts on Monday.
   const weekStart = addDays(selected, -((weekday(selected) + 6) % 7));
@@ -18,10 +20,10 @@ export function Header() {
     () =>
       days.map((d) => {
         const occ = occurrencesOn(data.tasks, d);
-        const busy = mergeBusy(occ).reduce((s, b) => s + (Math.min(b.end, dayEnd) - Math.max(b.start, dayStart) > 0 ? Math.min(b.end, dayEnd) - Math.max(b.start, dayStart) : 0), 0);
+        const busy = mergeBusy([...occ, ...eventsOn(d)]).reduce((s, b) => s + (Math.min(b.end, dayEnd) - Math.max(b.start, dayStart) > 0 ? Math.min(b.end, dayEnd) - Math.max(b.start, dayStart) : 0), 0);
         return { day: d, count: occ.length, done: occ.filter((o) => o.done).length, ratio: Math.min(1, busy / windowLen) };
       }),
-    [data.tasks, weekStart, dayStart, dayEnd],
+    [data.tasks, weekStart, dayStart, dayEnd, eventsOn],
   );
 
   const summary = useMemo(() => {
@@ -30,10 +32,11 @@ export function Header() {
     const doneCount = occ.filter((o) => o.done).length;
     const isToday = selected === today;
     const from = isToday ? Math.max(dayStart, minutesNow(now)) : dayStart;
-    const remainingBusy = mergeBusy(occ).reduce((s, b) => s + Math.max(0, Math.min(b.end, dayEnd) - Math.max(b.start, from)), 0);
+    const events = eventsOn(selected);
+    const remainingBusy = mergeBusy([...occ, ...events]).reduce((s, b) => s + Math.max(0, Math.min(b.end, dayEnd) - Math.max(b.start, from)), 0);
     const free = diffDays(selected, today) < 0 ? 0 : Math.max(0, dayEnd - from - remainingBusy);
-    return { total: occ.length, doneCount, planned, free, pct: occ.length ? Math.round((doneCount / occ.length) * 100) : 0 };
-  }, [data.tasks, selected, today, now, dayStart, dayEnd]);
+    return { total: occ.length, doneCount, planned, free, events: events.length, pct: occ.length ? Math.round((doneCount / occ.length) * 100) : 0 };
+  }, [data.tasks, selected, today, now, dayStart, dayEnd, eventsOn]);
 
   const d = fromKey(selected);
   const rel = relativeDayName(selected, today);
@@ -118,6 +121,12 @@ export function Header() {
           done
           <span className="dot-sep" aria-hidden="true" />
           <strong>{formatDuration(summary.planned)}</strong> planned
+          {summary.events > 0 && (
+            <>
+              <span className="dot-sep" aria-hidden="true" />
+              <strong>{summary.events}</strong> {summary.events === 1 ? 'event' : 'events'}
+            </>
+          )}
           {summary.free > 0 && (
             <>
               <span className="dot-sep" aria-hidden="true" />

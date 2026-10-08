@@ -9,6 +9,7 @@ export type Action =
   | { type: 'scheduleMany'; items: { id: string; date: DateKey; start: number }[] }
   | { type: 'unschedule'; id: string }
   | { type: 'toggleDone'; id: string; date: DateKey }
+  | { type: 'setDone'; id: string; date: DateKey; done: boolean }
   | { type: 'delete'; id: string }
   | { type: 'skipOccurrence'; id: string; date: DateKey }
   | { type: 'duplicate'; id: string; date: DateKey }
@@ -64,6 +65,13 @@ export function reduce(data: PlannerData, action: Action): PlannerData {
         const has = t.doneOn.includes(action.date);
         return { ...t, doneOn: has ? t.doneOn.filter((d) => d !== action.date) : [...t.doneOn, action.date] };
       });
+    case 'setDone': {
+      // Idempotent variant used for actions replayed from widgets/notifications.
+      const t = data.tasks.find((x) => x.id === action.id);
+      if (!t) return data;
+      const isDone = t.repeat === 'none' ? t.done : t.doneOn.includes(action.date);
+      return isDone === action.done ? data : reduce(data, { type: 'toggleDone', id: action.id, date: action.date });
+    }
     case 'delete':
       return { ...data, tasks: data.tasks.filter((t) => t.id !== action.id) };
     case 'skipOccurrence':

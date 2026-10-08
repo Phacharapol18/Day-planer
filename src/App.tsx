@@ -14,11 +14,16 @@ import { Help } from './components/Help';
 import { Focus } from './components/Focus';
 import { Toasts } from './components/Toasts';
 import { Icon } from './components/Icon';
+import { CalendarProvider } from './calendar';
+import { useNativeBridge, haptic } from './native/bridge';
+import { isNative } from './native/planner';
 
 export default function App() {
   return (
     <PlannerProvider>
-      <Shell />
+      <CalendarProvider>
+        <Shell />
+      </CalendarProvider>
     </PlannerProvider>
   );
 }
@@ -40,6 +45,7 @@ function Shell() {
         return;
       }
       if (start === undefined) return;
+      haptic.drop();
       switch (payload.kind) {
         case 'move':
           if (start !== payload.start) dispatch({ type: 'schedule', id: payload.task.id, date: selected, start });
@@ -59,12 +65,14 @@ function Shell() {
   );
 
   const onActivate = useCallback((p: DragPayload) => {
+    haptic.pick();
     if (p.kind === 'inbox') setInboxOpen(false);
   }, [setInboxOpen]);
 
   useTheme();
   useShortcuts();
   useReminders();
+  useNativeBridge();
 
   return (
     <DragProvider onDrop={onDrop} onActivate={onActivate}>
@@ -235,7 +243,8 @@ function useReminders() {
   const { notify, use24h } = data.settings;
   const minuteKey = Math.floor(minutesNow(now));
   useEffect(() => {
-    if (!notify || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    // On Android, native alarms handle reminders (even with the app closed).
+    if (isNative || !notify || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const nowMin = minutesNow(new Date());
     const timers = occurrencesOn(data.tasks, today)
       .filter((o) => !o.done && o.start > nowMin && o.start - nowMin < 180)

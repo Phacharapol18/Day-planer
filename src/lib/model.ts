@@ -38,7 +38,14 @@ export interface Settings {
   dayEnd: number;
   /** Pixels per hour on the timeline. */
   hourHeight: number;
+  /** Reminders when a block starts. */
   notify: boolean;
+  /** Extra heads-up this many minutes before a block (0 = only at start). */
+  leadMinutes: number;
+  /** Android: ongoing "Now" card in the notification shade while a block runs. */
+  nowCard: boolean;
+  /** Android: device calendars (CalendarContract ids) shown on the timeline. */
+  calendarIds: string[];
 }
 
 export interface PlannerData {
@@ -54,6 +61,9 @@ export const DEFAULT_SETTINGS: Settings = {
   dayEnd: 22 * 60,
   hourHeight: 72,
   notify: false,
+  leadMinutes: 5,
+  nowCard: true,
+  calendarIds: [],
 };
 
 export interface Category {

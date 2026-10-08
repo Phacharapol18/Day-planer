@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Day Planner</string>
+    <string name="title_activity_main">Day Planner</string>
+    <string name="package_name">com.phacharapol.dayplanner</string>
+    <string name="custom_url_scheme">com.phacharapol.dayplanner</string>
+
+    <string name="channel_reminders">Block reminders</string>
+    <string name="channel_reminders_desc">A heads-up when a planned block is about to start.</string>
+    <string name="channel_now">Now card</string>
+    <string name="channel_now_desc">A quiet, ongoing card showing the block you\'re in and the time left.</string>
+
+    <string name="untitled">Untitled</string>
+    <string name="reminder_in">In %1$d min · %2$s</string>
+    <string name="reminder_now">Starts now · %1$s</string>
+    <string name="now_label">Now</string>
+    <string name="now_then">Then %1$s · %2$s</string>
+    <string name="now_until">until %1$s</string>
+    <string name="action_done">Done</string>
+    <string name="action_extend">+15 min</string>
+
+    <string name="up_next">Up next</string>
+    <string name="all_clear">All clear</string>
+    <string name="nothing_left">Nothing left on today\'s timeline</string>
+    <string name="tap_to_plan">Tap + to plan something</string>
+    <string name="starts_in_min">in %1$d min · %2$s</string>
+    <string name="starts_at">at %1$s</string>
+    <string name="starts_tomorrow">tomorrow at %1$s</string>
+    <string name="nothing_planned">Nothing planned yet</string>
+    <string name="done_of">%1$d of %2$d done</string>
+    <string name="inbox_count">%1$d in inbox</string>
+    <string name="add">Add</string>
+    <string name="mark_done">Mark done</string>
+
+    <string name="widget_now_label">Now &amp; next</string>
+    <string name="widget_now_desc">The block you\'re in, a live countdown, and what\'s next.</string>
+    <string name="widget_agenda_label">Today</string>
+    <string name="widget_agenda_desc">Today\'s timeline at a glance.</string>
+    <string name="tile_label">Plan something</string>
+    <string name="share_label">Add to Day Planner inbox</string>
+</resources>

@@ -6,6 +6,7 @@ import { inputToTime, timeToInput, todayKey } from '../lib/time';
 import type { Theme } from '../lib/model';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
+import { PhoneSettings } from './PhoneSettings';
 
 function download(name: string, mime: string, body: string) {
   const url = URL.createObjectURL(new Blob([body], { type: mime }));
@@ -32,7 +33,6 @@ function SettingsBody() {
   const s = data.settings;
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmClear, setConfirmClear] = useState(false);
-  const [notifyState, setNotifyState] = useState(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
 
   const setWindow = (key: 'dayStart' | 'dayEnd', value: string) => {
     const v = inputToTime(value);
@@ -45,14 +45,6 @@ function SettingsBody() {
     dispatch({ type: 'settings', patch: next });
   };
 
-  const toggleNotify = async (on: boolean) => {
-    if (!on) return dispatch({ type: 'settings', patch: { notify: false } });
-    if (typeof Notification === 'undefined') return;
-    const perm = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
-    setNotifyState(perm);
-    if (perm === 'granted') dispatch({ type: 'settings', patch: { notify: true } });
-    else toast('Notifications are blocked for this site in your browser settings.', { tone: 'error' });
-  };
 
   return (
     <div className="settings-body">
@@ -103,15 +95,9 @@ function SettingsBody() {
             <input type="time" value={timeToInput(s.dayEnd % 1440)} onChange={(e) => setWindow('dayEnd', e.target.value)} aria-label="Day ends" />
           </span>
         </div>
-        <label className="setting">
-          <span>
-            Reminders at block start
-            {notifyState === 'denied' && <small className="settings-warn">Blocked in browser settings</small>}
-            {notifyState === 'unsupported' && <small className="settings-warn">Not supported in this browser</small>}
-          </span>
-          <input type="checkbox" className="switch" checked={s.notify} disabled={notifyState === 'unsupported'} onChange={(e) => void toggleNotify(e.target.checked)} />
-        </label>
       </section>
+
+      <PhoneSettings />
 
       <section className="settings-group">
         <h3 className="section-label">Your data</h3>

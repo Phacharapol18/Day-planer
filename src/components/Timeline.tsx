@@ -5,6 +5,9 @@ import { type Occurrence, makeTask, occurrencesOn } from '../lib/model';
 import { layoutColumns, freeGaps } from '../lib/layout';
 import { formatDuration, formatHourLabel, formatTime, minutesNow, diffDays, MINUTES_PER_DAY, SNAP, clamp } from '../lib/time';
 import { Icon } from './Icon';
+import { useCalendar } from '../calendar';
+import { haptic } from '../native/bridge';
+import { type ExternalEvent, colorHex } from '../lib/external';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -17,7 +20,13 @@ export function Timeline() {
   const pxPerMin = hourHeight / 60;
 
   const occs = useMemo(() => occurrencesOn(data.tasks, selected), [data.tasks, selected]);
-  const columns = useMemo(() => layoutColumns(occs.map((o) => ({ id: o.task.id, start: o.start, end: o.end }))), [occs]);
+  const { eventsOn, allDayOn } = useCalendar();
+  const events = eventsOn(selected);
+  const allDay = allDayOn(selected);
+  const columns = useMemo(
+    () => layoutColumns([...occs.map((o) => ({ id: o.task.id, start: o.start, end: o.end })), ...events.map((e) => ({ id: e.id, start: e.start, end: e.end }))]),
+    [occs, events],
+  );
   const isToday = selected === today;
   const isPast = diffDays(selected, today) < 0;
   const nowMin = minutesNow(now);
@@ -25,8 +34,8 @@ export function Timeline() {
   const gaps = useMemo(() => {
     if (isPast) return [];
     const from = isToday ? Math.max(dayStart, Math.ceil(nowMin / SNAP) * SNAP) : dayStart;
-    return freeGaps(occs, from, dayEnd, 30);
-  }, [occs, isPast, isToday, dayStart, dayEnd, nowMin]);
+    return freeGaps([...occs, ...events], from, dayEnd, 30);
+  }, [occs, events, isPast, isToday, dayStart, dayEnd, nowMin]);
 
   // Pointer → minute mapping for the drag engine.
   useEffect(() => {
@@ -71,6 +80,15 @@ export function Timeline() {
 
   return (
     <section className="timeline" aria-label="Day timeline">
+      {allDay.length > 0 && (
+        <ul className="tl-allday" aria-label="All-day events">
+          {allDay.map((ev) => (
+            <li key={ev.id} className="tl-allday-chip" style={ev.color !== null ? ({ '--cat': colorHex(ev.color) } as React.CSSProperties) : undefined}>
+              <Icon name="calendar" size={12} /> {ev.title}
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="tl-scroll" ref={scrollRef} data-testid="timeline-scroll">
         <div className="tl-grid" style={{ height: 24 * hourHeight }}>
           <div className="tl-gutter" aria-hidden="true">
@@ -103,6 +121,18 @@ export function Timeline() {
                 </div>
               ))}
 
+            {events.map((ev) => (
+              <EventBlock
+                key={ev.id}
+                ev={ev}
+                col={columns.get(ev.id) ?? { col: 0, cols: 1 }}
+                pxPerMin={pxPerMin}
+                use24h={use24h}
+                past={isPast || (isToday && nowMin >= ev.end)}
+                onOpen={() => toast(`${ev.title} · ${formatTime(ev.start, use24h)}–${formatTime(ev.end, use24h)}${ev.calendar ? ` · ${ev.calendar}` : ''}`)}
+              />
+            ))}
+
             {occs.map((o) => (
               <Block
                 key={o.task.id}
@@ -131,7 +161,10 @@ export function Timeline() {
                     onClick: () => setEditor({ mode: 'edit', id: o.task.id, date: selected }),
                   });
                 }}
-                onToggle={() => dispatch({ type: 'toggleDone', id: o.task.id, date: selected })}
+                onToggle={() => {
+                  if (!o.done) haptic.done();
+                  dispatch({ type: 'toggleDone', id: o.task.id, date: selected });
+                }}
                 onNudge={(dStart, dDur) => {
                   if (dDur) dispatch({ type: 'schedule', id: o.task.id, date: selected, start: o.start, duration: Math.max(15, o.task.duration + dDur) });
                   else dispatch({ type: 'schedule', id: o.task.id, date: selected, start: o.start + dStart });
@@ -167,7 +200,7 @@ export function Timeline() {
           </div>
         </div>
       </div>
-      {occs.length === 0 && !drag && <EmptyDay past={isPast} />}
+      {occs.length === 0 && events.length === 0 && !drag && <EmptyDay past={isPast} />}
     </section>
   );
 }
@@ -189,6 +222,35 @@ function EmptyDay({ past }: { past: boolean }) {
     </div>
   );
 }
+
+/** Read-only event from a phone calendar: shown for context, counted as busy, never dragged. */
+const EventBlock = memo(function EventBlock({ ev, col, pxPerMin, use24h, past, onOpen }: { ev: ExternalEvent; col: { col: number; cols: number }; pxPerMin: number; use24h: boolean; past: boolean; onOpen: () => void }) {
+  const height = Math.max((ev.end - ev.start) * pxPerMin, 18);
+  const widthPct = 100 / col.cols;
+  const time = `${formatTime(ev.start, use24h)} – ${formatTime(ev.end, use24h)}`;
+  return (
+    <button
+      type="button"
+      className={`event${height < 40 ? ' event--compact' : ''}${past ? ' is-past' : ''}`}
+      data-testid="event"
+      style={{
+        top: ev.start * pxPerMin,
+        height,
+        left: `calc(${col.col * widthPct}% + 4px)`,
+        width: `calc(${widthPct}% - ${col.cols > 1 ? 6 : 12}px)`,
+        ...(ev.color !== null ? { ['--cat' as string]: colorHex(ev.color) } : {}),
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={onOpen}
+      aria-label={`${ev.title}, ${time}, from ${ev.calendar || 'your calendar'}`}
+    >
+      <span className="event-title">
+        <Icon name="calendar" size={12} className="event-icon" /> {ev.title}
+      </span>
+      <span className="event-time">{time}</span>
+    </button>
+  );
+});
 
 interface BlockProps {
   occ: Occurrence;

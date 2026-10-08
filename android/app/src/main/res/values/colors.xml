@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#1F1D1A</color>
+    <color name="accent">#D4502A</color>
+    <color name="widget_bg">#FFFDF9</color>
+    <color name="widget_ink">#1F1D1A</color>
+    <color name="widget_muted">#7A746A</color>
+    <color name="widget_line">#171F1D1A</color>
+    <color name="widget_track">#1A1F1D1A</color>
+    <color name="faint">#A8A196</color>
+    <color name="cat_work">#5452C9</color>
+    <color name="cat_meeting">#1F7FB8</color>
+    <color name="cat_health">#2F8A57</color>
+    <color name="cat_personal">#C25A32</color>
+    <color name="cat_social">#A23F8C</color>
+    <color name="cat_errand">#A7741A</color>
+    <color name="splash_bg">#F6F3EE</color>
+</resources>

@@ -364,3 +364,33 @@ test.describe('mobile', () => {
     await expect(block(page, 'Walk')).toHaveAttribute('aria-label', /2pm – 3pm/);
   });
 });
+
+test.describe('phone calendar events', () => {
+  test.skip(({ isMobile }) => isMobile, 'desktop-only');
+
+  test('calendar events show read-only, count as busy, and steer scheduling', async ({ page }) => {
+    await page.addInitScript(() => {
+      const at = (h: number, m = 0) => new Date(2026, 9, 8, h, m).getTime();
+      window.__dpMockCalendar = () => [
+        { id: 'standup', title: 'Team standup', begin: at(10, 0), end: at(10, 30), allDay: false, color: 0x1f7fb8, calendar: 'Work' },
+        { id: 'lunch', title: 'Lunch w/ client', begin: at(12, 0), end: at(13, 0), allDay: false, color: 0xa23f8c, calendar: 'Work' },
+        { id: 'trip', title: 'Company offsite', begin: Date.UTC(2026, 9, 8), end: Date.UTC(2026, 9, 9), allDay: true, calendar: 'Work' },
+      ];
+    });
+    await boot(page, { tasks: [task({ title: 'Write spec', duration: 60, priority: 3 }), task({ title: 'Quick call', duration: 30 })] });
+    const ev = page.getByTestId('event');
+    await expect(ev).toHaveCount(2);
+    await expect(ev.first()).toHaveAttribute('aria-label', /Team standup, 10am – 10:30am, from Work/);
+    await expect(page.getByRole('list', { name: 'All-day events' })).toContainText('Company offsite');
+    await expect(page.locator('.summary-text')).toContainText('2 events');
+
+    // Events are not draggable: a drag on one does nothing, a click just informs.
+    await ev.first().click();
+    await expect(page.getByTestId('toast').last()).toContainText('Team standup');
+
+    // Auto-plan fills around meetings: 10:30–11:30 for the 1h task, 11:30–12:00 for the 30m one.
+    await page.getByRole('button', { name: 'Auto-plan' }).click();
+    await expect(block(page, 'Write spec')).toHaveAttribute('aria-label', /10:30am – 11:30am/);
+    await expect(block(page, 'Quick call')).toHaveAttribute('aria-label', /11:30am – 12pm/);
+  });
+});

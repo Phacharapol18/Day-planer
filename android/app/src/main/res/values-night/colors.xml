@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent">#F0703F</color>
+    <color name="widget_bg">#1B1A17</color>
+    <color name="widget_ink">#EEEAE3</color>
+    <color name="widget_muted">#9B958A</color>
+    <color name="widget_line">#17EEEAE3</color>
+    <color name="widget_track">#26EEEAE3</color>
+    <color name="faint">#6D685F</color>
+    <color name="cat_work">#8D8CF5</color>
+    <color name="cat_meeting">#5CB3E6</color>
+    <color name="cat_health">#62C48C</color>
+    <color name="cat_personal">#EC8A62</color>
+    <color name="cat_social">#D77AC0</color>
+    <color name="cat_errand">#DCAA4F</color>
+    <color name="splash_bg">#131210</color>
+</resources>
