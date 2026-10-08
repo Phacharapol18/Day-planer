@@ -113,25 +113,28 @@ await step('share text from another app lands in the inbox', async () => {
   await page.locator('[data-testid="inbox-item"]', { hasText: 'Buy oat milk' }).first().waitFor({ state: 'attached' });
 });
 
-await step('dayplanner://quickadd deep link opens quick add; back closes it', async () => {
-  sh('am start -a android.intent.action.VIEW -d dayplanner://quickadd');
-  await page.getByTestId('quickadd-input').waitFor();
-  writeFileSync(`${OUT}/03-quickadd.png`, await device.screenshot());
+await step('dayplanner://quickadd deep link opens quick add; Back closes it (3 rounds)', async () => {
   // Count Capacitor's DOM 'backbutton' events so a failure says whether Back reached the web layer.
   await page.evaluate(() => {
     window.__bb = 0;
     document.addEventListener('backbutton', () => window.__bb++);
   });
-  // First Back may only hide the keyboard (as in any Android app); press again if still open.
-  sh('input keyevent 4');
-  await sleep(700);
-  if ((await page.getByTestId('quickadd-input').count()) > 0) {
+  for (let round = 1; round <= 3; round++) {
+    sh('am start -a android.intent.action.VIEW -d dayplanner://quickadd');
+    await page.getByTestId('quickadd-input').waitFor();
+    if (round === 1) writeFileSync(`${OUT}/03-quickadd.png`, await device.screenshot());
+    await sleep(400);
+    // First Back may only hide the keyboard (as in any Android app); press again if still open.
     sh('input keyevent 4');
     await sleep(700);
+    if ((await page.getByTestId('quickadd-input').count()) > 0) {
+      sh('input keyevent 4');
+      await sleep(700);
+    }
+    const bb = await page.evaluate(() => window.__bb);
+    const ime = sh('dumpsys input_method | grep -m1 mInputShown || true').trim();
+    await waitFor(async () => (await page.getByTestId('quickadd-input').count()) === 0, `round ${round}: quick add closed by back (backbutton events=${bb}, ${ime})`, 5000);
   }
-  const bb = await page.evaluate(() => window.__bb);
-  const ime = sh('dumpsys input_method | grep -m1 mInputShown || true').trim();
-  await waitFor(async () => (await page.getByTestId('quickadd-input').count()) === 0, `quick add closed by back (backbutton events=${bb}, ${ime})`, 5000);
 });
 
 await step('widgets and Quick Settings tile are registered', async () => {
