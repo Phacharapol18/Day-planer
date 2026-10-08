@@ -89,11 +89,29 @@ const startMin = Math.max(0, Math.min(nowMin - 10, 1440 - 61));
 
 sh(`pm grant ${PKG} android.permission.POST_NOTIFICATIONS`);
 sh(`pm grant ${PKG} android.permission.READ_CALENDAR`);
+// The emulator action presses MENU right after boot; a launcher that is still starting can ANR on it,
+// and its "isn't responding" dialog later takes window focus and Back presses. Don't let system error
+// dialogs cover the app (as CTS does). The app's own ANRs still fail the run via logcat (last step).
+sh('settings put global hide_error_dialogs 1');
 sh('logcat -c');
 sh(`am start -W -n ${PKG}/.MainActivity`);
 
 const [device] = await android.devices();
 if (!device) throw new Error('no adb device');
+
+const focus = () => (sh('dumpsys window').match(/mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}/) || [])[1] || '?';
+const anrDialogs = () => sh('dumpsys window windows').match(/Application Not Responding: [\w.]+/g) || [];
+/** Steps drive the app through its window: make sure it has focus, clearing other apps' ANR dialogs. */
+async function ensureAppFocused(why) {
+  for (const w of new Set(anrDialogs())) {
+    if (w.endsWith(PKG)) throw new Error(`the app is not responding (${w})`);
+    console.log(`  ${why}: dismissing a dialog left by another app: "${w}"`);
+    await device.tap({ text: 'Wait' }, { timeout: 15000 }).catch((e) => console.log(`  could not tap Wait: ${String(e.message).split('\n')[0]}`));
+  }
+  await waitFor(async () => focus().includes(`${PKG}/`), 'app window focused', 15000).catch((e) => {
+    throw new Error(`${e.message} (focus=${focus()})`);
+  });
+}
 let page;
 let pagePid = '';
 /** (Re)attach to the app's WebView. A closed page means the WebView went away: say why we reconnect. */
@@ -109,6 +127,7 @@ async function ensurePage() {
 }
 
 await step('app boots to the timeline', async () => {
+  await ensureAppFocused('startup');
   await page.getByRole('heading', { level: 1 }).waitFor();
   const h = await page.getByRole('heading', { level: 1 }).textContent();
   if (!/Today/.test(h)) throw new Error(`heading was "${h}"`);
@@ -183,11 +202,10 @@ await step('dayplanner://quickadd deep link opens quick add; Back closes it (3 r
     document.addEventListener('backbutton', () => window.__bb++);
   });
   const imeShown = () => /mInputShown=true/.test(sh('dumpsys input_method'));
-  const focus = () => (sh('dumpsys window').match(/mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}/) || [])[1] || '?';
   const open = async () => (await page.getByTestId('quickadd-input').count()) > 0;
   // Back goes to the top-most window: make sure that is the app, not a shade left open by an earlier step.
   sh('cmd statusbar collapse');
-  await waitFor(async () => focus().includes(`${PKG}/`), 'app window focused', 5000);
+  await ensureAppFocused('before Back');
   for (let round = 1; round <= 3; round++) {
     // A trace of where each Back press went, printed every round: on a failure it is the evidence.
     const t0 = Date.now();
