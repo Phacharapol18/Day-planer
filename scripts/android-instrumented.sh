@@ -16,4 +16,10 @@ for f in "$OUT"/widgets/*.png; do
   echo "PNG-END"
   echo "::endgroup::"
 done
+# Diagnostic reports written by the tests (e.g. which code opens Play services' font provider).
+for f in "$OUT"/widgets/*.txt; do
+  [ -f "$f" ] || continue
+  echo "--- $(basename "$f")"
+  cat "$f"
+done
 echo "$log" | grep -q "^OK (" || { echo "Instrumentation tests failed"; exit 1; }
