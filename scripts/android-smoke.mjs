@@ -136,11 +136,14 @@ await step('seeded plan renders and syncs to native', async () => {
 await step('ongoing Now card appears in the notification shade', async () => {
   await waitFor(() => sh('dumpsys notification --noredact').includes('Smoke focus block'), 'Now notification');
   sh('cmd statusbar expand-notifications');
-  await sleep(1200);
-  const png = await device.screenshot();
-  writeFileSync(`${OUT}/02-now-card.png`, png);
   // Inline in the log: how the shade lays out the Now card (expanded, actions visible) is part of the check.
-  console.log(`::group::png 02-now-card.png\nPNG-BEGIN 02-now-card.png\n${png.toString('base64')}\nPNG-END\n::endgroup::`);
+  for (const [file, at] of [['02-now-card.png', 1200], ['02b-now-card.png', 6000]]) {
+    await sleep(at === 1200 ? at : at - 1200);
+    const png = await device.screenshot();
+    writeFileSync(`${OUT}/${file}`, png);
+    console.log(`  ${file} at device time ${sh('date +%T').trim()}`);
+    console.log(`::group::png ${file}\nPNG-BEGIN ${file}\n${png.toString('base64')}\nPNG-END\n::endgroup::`);
+  }
 });
 
 await step('tapping Done on the Now card completes the block in the app', async () => {
@@ -154,6 +157,11 @@ await step('tapping Done on the Now card completes the block in the app', async 
     return /done/.test(label || '');
   }, 'block marked done in the app');
   await waitFor(() => !sh('dumpsys notification --noredact').includes('Smoke focus block'), 'Now card cleared');
+  // Every post/cancel of the app's notifications so far (system event log): shows any churn of the Now card.
+  const events = adb('logcat', '-d', '-b', 'events', '-v', 'time')
+    .split('\n')
+    .filter((l) => /notification_(enqueue|cancel|canceled|visibility|expansion|clicked|action_clicked)/.test(l) && l.includes(PKG));
+  console.log(`  notification events (${events.length}):\n    ${events.slice(-40).join('\n    ')}`);
 });
 
 await step('share text from another app lands in the inbox', async () => {
