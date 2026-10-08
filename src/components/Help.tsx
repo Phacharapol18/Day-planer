@@ -11,6 +11,7 @@ const GROUPS: [string, [string, string][]][] = [
       ['←  →', 'Previous / next day'],
       ['I', 'Toggle inbox'],
       ['F', 'Focus mode'],
+      ['W', 'Weekly insights'],
       ['⌘Z  /  ⇧⌘Z', 'Undo / redo'],
       ['?', 'This list'],
     ],

@@ -47,57 +47,59 @@ public final class Widgets {
     static void updateNow(Context ctx, AppWidgetManager mgr, int[] ids) {
         PlannerStore.Snapshot s = PlannerStore.load(ctx);
         long now = System.currentTimeMillis();
+        for (int id : ids) mgr.updateAppWidget(id, nowViews(ctx, s, now));
+    }
+
+    /** The Now & next widget for a snapshot at a moment (also used by the on-device render test). */
+    static RemoteViews nowViews(Context ctx, PlannerStore.Snapshot s, long now) {
         PlannerStore.Item cur = PlannerStore.current(s, now);
         PlannerStore.Item next = PlannerStore.next(s, now, cur);
-        for (int id : ids) {
-            RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_now);
-            v.setOnClickPendingIntent(R.id.w_root, Notifier.openApp(ctx, cur != null ? "focus" : "today", 20));
-            v.setOnClickPendingIntent(R.id.w_add, Notifier.openApp(ctx, "quickadd", 21));
-            if (!s.pro) {
-                locked(ctx, v);
-                mgr.updateAppWidget(id, v);
-                continue;
-            }
-            if (cur != null) {
-                v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.now_label).toUpperCase(Locale.getDefault()));
-                v.setTextViewText(R.id.w_title, cur.title.isEmpty() ? ctx.getString(R.string.untitled) : cur.title);
-                v.setInt(R.id.w_rail, "setBackgroundColor", catColor(ctx, cur));
-                // Chronometer counts down to the block's end using the elapsed-realtime clock.
-                long base = SystemClock.elapsedRealtime() + (cur.endMs - now);
-                v.setChronometer(R.id.w_timer, base, null, true);
-                v.setChronometerCountDown(R.id.w_timer, true);
-                v.setViewVisibility(R.id.w_timer, View.VISIBLE);
-                v.setViewVisibility(R.id.w_progress, View.VISIBLE);
-                int pct = (int) Math.max(0, Math.min(100, (now - cur.startMs) * 100 / Math.max(1, cur.endMs - cur.startMs)));
-                v.setProgressBar(R.id.w_progress, 100, pct, false);
-                v.setTextViewText(R.id.w_meta, ctx.getString(R.string.now_until, PlannerStore.formatTime(cur.endMs, s.use24h)));
-                v.setViewVisibility(R.id.w_done, View.VISIBLE);
-                v.setOnClickPendingIntent(R.id.w_done, Notifier.action(ctx, AlarmReceiver.ACTION_DONE, cur));
-            } else {
-                v.setViewVisibility(R.id.w_timer, View.GONE);
-                v.setViewVisibility(R.id.w_progress, View.GONE);
-                v.setViewVisibility(R.id.w_done, View.GONE);
-                if (next != null) {
-                    v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.up_next).toUpperCase(Locale.getDefault()));
-                    v.setTextViewText(R.id.w_title, next.title.isEmpty() ? ctx.getString(R.string.untitled) : next.title);
-                    v.setInt(R.id.w_rail, "setBackgroundColor", catColor(ctx, next));
-                    v.setTextViewText(R.id.w_meta, relativeStart(ctx, next.startMs, now, s.use24h));
-                } else {
-                    v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.all_clear).toUpperCase(Locale.getDefault()));
-                    v.setTextViewText(R.id.w_title, ctx.getString(R.string.nothing_left));
-                    v.setInt(R.id.w_rail, "setBackgroundColor", ContextCompat.getColor(ctx, R.color.faint));
-                    v.setTextViewText(R.id.w_meta, ctx.getString(R.string.tap_to_plan));
-                }
-            }
-            PlannerStore.Item after = cur != null ? next : (next != null ? PlannerStore.next(s, next.startMs, next) : null);
-            if (after != null) {
-                v.setViewVisibility(R.id.w_next, View.VISIBLE);
-                v.setTextViewText(R.id.w_next, ctx.getString(R.string.now_then, after.title, PlannerStore.formatTime(after.startMs, s.use24h)));
-            } else {
-                v.setViewVisibility(R.id.w_next, View.GONE);
-            }
-            mgr.updateAppWidget(id, v);
+        RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.widget_now);
+        v.setOnClickPendingIntent(R.id.w_root, Notifier.openApp(ctx, cur != null ? "focus" : "today", 20));
+        v.setOnClickPendingIntent(R.id.w_add, Notifier.openApp(ctx, "quickadd", 21));
+        if (!s.pro) {
+            locked(ctx, v);
+            return v;
         }
+        if (cur != null) {
+            v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.now_label).toUpperCase(Locale.getDefault()));
+            v.setTextViewText(R.id.w_title, cur.title.isEmpty() ? ctx.getString(R.string.untitled) : cur.title);
+            v.setInt(R.id.w_rail, "setBackgroundColor", catColor(ctx, cur));
+            // Chronometer counts down to the block's end using the elapsed-realtime clock.
+            long base = SystemClock.elapsedRealtime() + (cur.endMs - now);
+            v.setChronometer(R.id.w_timer, base, null, true);
+            v.setChronometerCountDown(R.id.w_timer, true);
+            v.setViewVisibility(R.id.w_timer, View.VISIBLE);
+            v.setViewVisibility(R.id.w_progress, View.VISIBLE);
+            int pct = (int) Math.max(0, Math.min(100, (now - cur.startMs) * 100 / Math.max(1, cur.endMs - cur.startMs)));
+            v.setProgressBar(R.id.w_progress, 100, pct, false);
+            v.setTextViewText(R.id.w_meta, ctx.getString(R.string.now_until, PlannerStore.formatTime(cur.endMs, s.use24h)));
+            v.setViewVisibility(R.id.w_done, View.VISIBLE);
+            v.setOnClickPendingIntent(R.id.w_done, Notifier.action(ctx, AlarmReceiver.ACTION_DONE, cur));
+        } else {
+            v.setViewVisibility(R.id.w_timer, View.GONE);
+            v.setViewVisibility(R.id.w_progress, View.GONE);
+            v.setViewVisibility(R.id.w_done, View.GONE);
+            if (next != null) {
+                v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.up_next).toUpperCase(Locale.getDefault()));
+                v.setTextViewText(R.id.w_title, next.title.isEmpty() ? ctx.getString(R.string.untitled) : next.title);
+                v.setInt(R.id.w_rail, "setBackgroundColor", catColor(ctx, next));
+                v.setTextViewText(R.id.w_meta, relativeStart(ctx, next.startMs, now, s.use24h));
+            } else {
+                v.setTextViewText(R.id.w_kicker, ctx.getString(R.string.all_clear).toUpperCase(Locale.getDefault()));
+                v.setTextViewText(R.id.w_title, ctx.getString(R.string.nothing_left));
+                v.setInt(R.id.w_rail, "setBackgroundColor", ContextCompat.getColor(ctx, R.color.faint));
+                v.setTextViewText(R.id.w_meta, ctx.getString(R.string.tap_to_plan));
+            }
+        }
+        PlannerStore.Item after = cur != null ? next : (next != null ? PlannerStore.next(s, next.startMs, next) : null);
+        if (after != null) {
+            v.setViewVisibility(R.id.w_next, View.VISIBLE);
+            v.setTextViewText(R.id.w_next, ctx.getString(R.string.now_then, after.title, PlannerStore.formatTime(after.startMs, s.use24h)));
+        } else {
+            v.setViewVisibility(R.id.w_next, View.GONE);
+        }
+        return v;
     }
 
     /** Free users see an invitation instead of their plan; tapping opens the paywall. */

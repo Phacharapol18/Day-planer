@@ -105,6 +105,40 @@
   --block-tint: 22%;
 }
 
+/* Chart fills: light uses the category hues; dark uses in-band steps (validated, see lib/insights CHART_ORDER). */
+:root {
+  --chart-work: #5452c9;
+  --chart-health: #2f8a57;
+  --chart-social: #a23f8c;
+  --chart-errand: #a7741a;
+  --chart-meeting: #1f7fb8;
+  --chart-personal: #c25a32;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --chart-work: #7a77de;
+    --chart-health: #379c67;
+    --chart-social: #bb61a5;
+    --chart-errand: #ac7c15;
+    --chart-meeting: #368fc1;
+    --chart-personal: #c66841;
+  }
+}
+:root[data-theme='dark'] {
+  --chart-work: #7a77de;
+  --chart-health: #379c67;
+  --chart-social: #bb61a5;
+  --chart-errand: #ac7c15;
+  --chart-meeting: #368fc1;
+  --chart-personal: #c66841;
+}
+[data-chart='work'] { --fill: var(--chart-work); }
+[data-chart='health'] { --fill: var(--chart-health); }
+[data-chart='social'] { --fill: var(--chart-social); }
+[data-chart='errand'] { --fill: var(--chart-errand); }
+[data-chart='meeting'] { --fill: var(--chart-meeting); }
+[data-chart='personal'] { --fill: var(--chart-personal); }
+
 [data-cat='work'] { --cat: var(--cat-work); }
 [data-cat='meeting'] { --cat: var(--cat-meeting); }
 [data-cat='health'] { --cat: var(--cat-health); }

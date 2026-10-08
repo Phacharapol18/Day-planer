@@ -67,7 +67,7 @@ export function Header() {
         <div className="masthead-actions">
           {ritual && (
             <button type="button" className="btn btn--quiet ritual-btn" onClick={() => setPanel(ritual)} data-testid="ritual-cta">
-              <Icon name={ritual === 'plan' ? 'sun' : 'check'} size={16} /> <span className="hide-sm">{ritual === 'plan' ? 'Plan day' : 'Shut down'}</span>
+              <Icon name={ritual === 'plan' ? 'sun' : 'check'} size={16} /> {ritual === 'plan' ? 'Plan day' : 'Shut down'}
             </button>
           )}
           <button type="button" className="btn btn--primary" onClick={() => setPanel('quickadd')} aria-keyshortcuts="Control+K Meta+K N">
@@ -154,9 +154,9 @@ export function Header() {
           )}
         </p>
         {currentStreak > 0 && (
-          <span className="streak-chip" title="Days in a row you planned or closed your day" data-testid="streak">
+          <button type="button" className="streak-chip" title="Days in a row you planned or closed your day · open Insights" onClick={() => setPanel('insights')} data-testid="streak">
             <Icon name="flag" size={13} /> {currentStreak}-day streak
-          </span>
+          </button>
         )}
       </div>
       {highlightTask && (

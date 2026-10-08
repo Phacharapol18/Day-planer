@@ -16,6 +16,7 @@ export const PRO_FEATURES: { id: ProFeature; title: string; detail: string }[] =
   { id: 'widgets', title: 'Home-screen widgets', detail: 'Now & next with a live countdown, plus today at a glance.' },
   { id: 'nowcard', title: 'Live Now card', detail: 'Countdown, Done and +15 min right in your notifications.' },
   { id: 'repeats', title: 'Unlimited routines', detail: `Free includes ${FREE_REPEAT_LIMIT} repeating blocks.` },
+  { id: 'insights', title: 'Weekly insights', detail: 'See where your time goes, day by day and by category.' },
 ];
 
 export interface ProState {

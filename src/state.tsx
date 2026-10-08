@@ -15,7 +15,7 @@ export type EditorTarget =
   | { mode: 'new'; draft: Task }
   | { mode: 'edit'; id: string; date: DateKey | null };
 
-export type Panel = null | 'quickadd' | 'settings' | 'help' | 'focus' | 'plan' | 'shutdown';
+export type Panel = null | 'quickadd' | 'settings' | 'help' | 'focus' | 'plan' | 'shutdown' | 'insights';
 
 interface PlannerApi {
   data: PlannerData;

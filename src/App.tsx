@@ -18,6 +18,7 @@ import { CalendarProvider } from './calendar';
 import { ProProvider } from './pro/ProProvider';
 import { Paywall } from './pro/Paywall';
 import { Ritual } from './components/Ritual';
+import { Insights } from './components/Insights';
 import { useNativeBridge, haptic } from './native/bridge';
 import { isNative } from './native/planner';
 
@@ -99,6 +100,7 @@ function Shell() {
       <Help />
       <Focus />
       <Ritual />
+      <Insights />
       <Paywall />
       <Toasts />
       <UpdatePrompt />
@@ -236,6 +238,10 @@ function useShortcuts() {
           break;
         case '?':
           setPanel('help');
+          break;
+        case 'w':
+        case 'W':
+          setPanel('insights');
           break;
       }
     };

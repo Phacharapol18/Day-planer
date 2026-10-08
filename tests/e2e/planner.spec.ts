@@ -531,3 +531,39 @@ test.describe('rituals', () => {
     await expect(focus.getByRole('button', { name: 'Stretch' })).toHaveClass(/is-next/);
   });
 });
+
+test.describe('insights', () => {
+  test.skip(({ isMobile }) => isMobile, 'desktop-only');
+
+  const weekTasks = () => [
+    task({ title: 'Deep work', date: '2026-10-05', start: 9 * 60, duration: 120, done: true }),
+    task({ title: 'Gym', date: '2026-10-06', start: 18 * 60, duration: 60, category: 'health', done: true }),
+    task({ title: 'Standup', date: '2026-10-05', start: 9 * 60 + 30, duration: 15, category: 'meeting', repeat: 'weekdays' }),
+  ];
+
+  test('Pro: weekly stats, stacked columns with tooltips, and a table view', async ({ page }) => {
+    await boot(page, { tasks: weekTasks(), pro: true });
+    await page.keyboard.press('w');
+    const ins = page.getByTestId('insights');
+    await expect(ins.getByText('This week')).toBeVisible();
+    await expect(ins.locator('.ins-tile').first()).toContainText('4h 15m'); // 2h + 1h + 5×15m
+    await expect(ins.locator('.ins-tile').nth(1)).toContainText('29%'); // 2 of 7 done
+    await expect(ins.getByRole('list', { name: 'Categories' })).toContainText('Deep work');
+    const mon = ins.getByRole('button', { name: /^Mon: 2h 15m planned, 1 of 2 done/ });
+    await mon.hover();
+    await expect(mon.getByRole('tooltip')).toContainText('Deep work');
+    await expect(ins.locator('.ins-bars li').first()).toContainText('Deep work');
+    await ins.getByRole('button', { name: 'Show as table' }).click();
+    await expect(ins.getByRole('table')).toContainText('Mon 5');
+    await ins.getByRole('button', { name: 'Previous week' }).click();
+    await expect(ins.getByText('Nothing was planned that week yet.')).toBeVisible();
+  });
+
+  test('free users see headline stats and a locked chart', async ({ page }) => {
+    await boot(page, { tasks: weekTasks() });
+    await page.keyboard.press('w');
+    await expect(page.getByTestId('insights').locator('.ins-tile').first()).toContainText('4h 15m');
+    await page.getByTestId('insights-unlock').click();
+    await expect(page.getByTestId('paywall').getByRole('heading')).toHaveText('See where your time really goes.');
+  });
+});

@@ -1,0 +1,88 @@
+import { type CategoryId, type PlannerData, type Task, occurrencesOn } from './model';
+import { type DateKey, addDays } from './time';
+import { streak, bestStreak } from './journal';
+
+/** Stacking / legend order for category charts — validated for CVD + normal-vision separation in both themes. */
+export const CHART_ORDER: CategoryId[] = ['work', 'health', 'social', 'errand', 'meeting', 'personal'];
+
+export interface DayStats {
+  date: DateKey;
+  /** Planned minutes per category (planner blocks only, not calendar events). */
+  byCat: Record<CategoryId, number>;
+  total: number;
+  count: number;
+  done: number;
+  mood?: 1 | 2 | 3 | 4 | 5;
+  ritual: boolean;
+}
+
+export interface WeekStats {
+  days: DayStats[];
+  totals: Record<CategoryId, number>;
+  planned: number;
+  count: number;
+  done: number;
+  completion: number | null;
+  avgMood: number | null;
+  streak: number;
+  bestStreak: number;
+  highlightsHit: number;
+  highlightsSet: number;
+}
+
+const zero = (): Record<CategoryId, number> => ({ work: 0, health: 0, social: 0, errand: 0, meeting: 0, personal: 0 });
+
+export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStart: DateKey, today: DateKey): WeekStats {
+  const days: DayStats[] = [];
+  const totals = zero();
+  let hit = 0;
+  let set = 0;
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(weekStart, i);
+    const occ = occurrencesOn(data.tasks as Task[], date);
+    const byCat = zero();
+    for (const o of occ) {
+      const m = o.end - o.start;
+      byCat[o.task.category] += m;
+      totals[o.task.category] += m;
+    }
+    const e = data.journal[date];
+    if (e?.highlight) {
+      set++;
+      if (occ.some((o) => o.task.id === e.highlight && o.done)) hit++;
+    }
+    days.push({
+      date,
+      byCat,
+      total: occ.reduce((s, o) => s + (o.end - o.start), 0),
+      count: occ.length,
+      done: occ.filter((o) => o.done).length,
+      mood: e?.mood,
+      ritual: !!e && (!!e.planned || !!e.shutdown),
+    });
+  }
+  const count = days.reduce((s, d) => s + d.count, 0);
+  const done = days.reduce((s, d) => s + d.done, 0);
+  const moods = days.map((d) => d.mood).filter((m): m is NonNullable<typeof m> => !!m);
+  return {
+    days,
+    totals,
+    planned: days.reduce((s, d) => s + d.total, 0),
+    count,
+    done,
+    completion: count ? done / count : null,
+    avgMood: moods.length ? moods.reduce((a, b) => a + b, 0) / moods.length : null,
+    streak: streak(data.journal, today),
+    bestStreak: bestStreak(data.journal),
+    highlightsHit: hit,
+    highlightsSet: set,
+  };
+}
+
+/** Clean y-axis ticks in hours for a max value in minutes. */
+export function hourTicks(maxMin: number): number[] {
+  const maxH = Math.max(1, Math.ceil(maxMin / 60));
+  const step = maxH <= 4 ? 1 : maxH <= 8 ? 2 : maxH <= 16 ? 4 : 6;
+  const top = Math.ceil(maxH / step) * step;
+  return Array.from({ length: top / step + 1 }, (_, i) => i * step);
+}
