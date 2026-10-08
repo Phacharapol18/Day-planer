@@ -19,10 +19,10 @@ const HEADLINES: Record<ProFeature | 'default', string> = {
 const FEATURE_ICON: Record<ProFeature, IconName> = {
   autoplan: 'sparkle',
   calendars: 'calendar',
-  widgets: 'target',
+  widgets: 'grid',
   nowcard: 'bell',
   repeats: 'repeat',
-  insights: 'flag',
+  insights: 'chart',
   themes: 'sun',
 };
 

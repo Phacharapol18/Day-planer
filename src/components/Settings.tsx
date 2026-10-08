@@ -150,7 +150,7 @@ function SettingsBody() {
               toast('All tasks cleared', { action: { label: 'Undo', run: undo } });
             }}
           >
-            <Icon name="trash" size={15} /> {confirmClear ? 'Click again to erase everything' : 'Erase all tasks'}
+            <Icon name="trash" size={15} /> {confirmClear ? 'Press again to erase everything' : 'Erase all tasks'}
           </button>
         </div>
       </section>

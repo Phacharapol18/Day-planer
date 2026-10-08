@@ -20,11 +20,12 @@ export function Insights() {
 }
 
 function InsightsBody() {
-  const { data, selected, today, setPanel } = usePlanner();
+  const { data, selected, today, now, setPanel } = usePlanner();
   const { isPro, openPaywall } = usePro();
   const [weekStart, setWeekStart] = useState(() => addDays(selected, -((weekday(selected) + 6) % 7)));
   const [asTable, setAsTable] = useState(false);
-  const stats = useMemo(() => weekStats(data, weekStart, today), [data, weekStart, today]);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const stats = useMemo(() => weekStats(data, weekStart, today, nowMin), [data, weekStart, today, nowMin]);
   const thisWeek = addDays(today, -((weekday(today) + 6) % 7)) === weekStart;
   const range = `${monthDay(weekStart)} – ${monthDay(addDays(weekStart, 6))}`;
   const ranked = CHART_ORDER.filter((c) => stats.totals[c] > 0).sort((a, b) => stats.totals[b] - stats.totals[a]);
@@ -50,9 +51,9 @@ function InsightsBody() {
 
       <div className="ins-tiles">
         <Tile label="Time planned" value={formatDuration(stats.planned)} sub={`${stats.count} block${stats.count === 1 ? '' : 's'}`} />
-        <Tile label="Completed" value={stats.completion === null ? '—' : `${Math.round(stats.completion * 100)}%`} sub={`${stats.done} of ${stats.count}`} />
+        <Tile label="Completed" value={stats.completion === null ? '—' : `${Math.round(stats.completion * 100)}%`} sub={stats.due ? `${stats.done} of ${stats.due} so far` : 'Nothing due yet'} />
         <Tile label="Planning streak" value={`${stats.streak} ${stats.streak === 1 ? 'day' : 'days'}`} sub={`Best ${stats.bestStreak}`} />
-        <Tile label="Highlights hit" value={stats.highlightsSet ? `${stats.highlightsHit}/${stats.highlightsSet}` : '—'} sub={stats.avgMood ? `Mood: ${MOOD[Math.round(stats.avgMood)]}` : 'No check-ins yet'} />
+        <Tile label="Highlights hit" value={stats.highlightsSet ? `${stats.highlightsHit}/${stats.highlightsSet}` : '—'} sub={stats.highlightsSet ? 'Your one thing, done' : 'Pick one each morning'} />
       </div>
 
       <div className={`ins-locked-wrap${isPro ? '' : ' is-locked'}`}>
@@ -101,12 +102,14 @@ function InsightsBody() {
 
         {!isPro && (
           <div className="ins-lock">
-            <p>
-              <strong>See where your time really goes.</strong> Weekly breakdowns by category, day by day.
-            </p>
-            <button type="button" className="btn btn--primary" onClick={() => openPaywall('insights')} data-testid="insights-unlock">
-              <Icon name="sparkle" size={16} /> Unlock with Pro
-            </button>
+            <div className="ins-lock-card">
+              <p>
+                <strong>See where your time really goes.</strong> Weekly breakdowns by category, day by day.
+              </p>
+              <button type="button" className="btn btn--primary" onClick={() => openPaywall('insights')} data-testid="insights-unlock">
+                <Icon name="sparkle" size={16} /> Unlock with Pro
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -140,7 +143,7 @@ function WeekColumns({ days, today }: { days: DayStats[]; today: string }) {
           {days.map((d) => {
             const segs = CHART_ORDER.filter((c) => d.byCat[c] > 0);
             return (
-              <div key={d.date} className="ins-col-slot">
+              <div key={d.date} className={`ins-col-slot${d.date > today ? ' is-future' : ''}`}>
                 <button type="button" className="ins-col" style={{ height: `${(d.total / top) * 100}%` }} aria-label={`${DAY_NAMES_SHORT[weekday(d.date)]}: ${formatDuration(d.total)} planned, ${d.done} of ${d.count} done`}>
                   {segs.map((c) => (
                     <span key={c} className="ins-seg" data-chart={c} style={{ flexGrow: d.byCat[c] }} />
@@ -174,6 +177,12 @@ function WeekColumns({ days, today }: { days: DayStats[]; today: string }) {
           </span>
         ))}
       </div>
+      {days.some((d) => d.ritual) && (
+        <p className="ins-note">
+          <span className="ins-legend-ritual" aria-hidden="true" />
+          Planned or closed the day
+        </p>
+      )}
     </div>
   );
 }

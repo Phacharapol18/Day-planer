@@ -1,18 +1,19 @@
 import { usePlanner } from '../state';
 import { Dialog } from './Dialog';
 import { Icon } from './Icon';
+import { combo } from '../lib/platform';
 
 const GROUPS: [string, [string, string][]][] = [
   [
     'Anywhere',
     [
-      ['⌘K  /  N', 'Quick add'],
+      [`${combo('K')}  /  N`, 'Quick add'],
       ['T', 'Jump to today'],
       ['←  →', 'Previous / next day'],
       ['I', 'Toggle inbox'],
       ['F', 'Focus mode'],
       ['W', 'Weekly insights'],
-      ['⌘Z  /  ⇧⌘Z', 'Undo / redo'],
+      [`${combo('Z')}  /  ${combo('Z', true)}`, 'Undo / redo'],
       ['?', 'This list'],
     ],
   ],

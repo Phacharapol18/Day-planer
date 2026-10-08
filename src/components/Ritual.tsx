@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePlanner } from '../state';
 import { usePro } from '../pro/ProProvider';
 import { useCalendar } from '../calendar';
@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 import { type Task, type DayEntry, inboxTasks, missedTasks, occurrencesOn, makeTask } from '../lib/model';
 import { autoPlan, mergeBusy } from '../lib/layout';
 import { streak } from '../lib/journal';
-import { addDays, formatDuration, formatTime, minutesNow } from '../lib/time';
+import { addDays, diffDays, formatDuration, formatTime, minutesNow, monthDay, relativeDayName } from '../lib/time';
 import { haptic } from '../native/bridge';
 
 /** Morning "Plan my day" and evening "Shut down" — short, guided, and they build a streak. */
@@ -66,11 +66,41 @@ function PlanFlow() {
       return n;
     });
 
+  // Dropping is deferred so it can be undone in place (the app's Undo toast sits under the dialog).
+  // The deletes are committed when the user moves on or closes the ritual.
+  const [dropped, setDropped] = useState<Set<string>>(() => new Set());
+  const droppedRef = useRef(dropped);
+  droppedRef.current = dropped;
+  const commitDrops = () => {
+    for (const id of droppedRef.current) dispatch({ type: 'delete', id });
+    droppedRef.current = new Set();
+    setDropped(new Set());
+  };
+  useEffect(
+    () => () => {
+      for (const id of droppedRef.current) dispatch({ type: 'delete', id });
+    },
+    [dispatch],
+  );
+  const setDrop = (id: string, on: boolean) =>
+    setDropped((d) => {
+      const n = new Set(d);
+      if (on) n.add(id);
+      else n.delete(id);
+      return n;
+    });
+
   const carry = (t: Task, to: 'inbox' | 'done' | 'drop') => {
     if (to === 'inbox') dispatch({ type: 'unschedule', id: t.id });
     else if (to === 'done') dispatch({ type: 'setDone', id: t.id, date: t.date as string, done: true });
-    else dispatch({ type: 'delete', id: t.id });
+    else setDrop(t.id, true);
   };
+  const whenMissed = (t: Task) => {
+    const d = t.date as string;
+    const day = diffDays(d, today) >= -6 ? relativeDayName(d, today) : monthDay(d);
+    return t.start !== null ? `${day} · ${formatTime(t.start, use24h)}` : day;
+  };
+  const allYesterday = missed.every((t) => diffDays(t.date as string, today) === -1);
 
   const commitPicks = () => {
     if (!pickedTasks.length) return;
@@ -110,27 +140,47 @@ function PlanFlow() {
 
       {step === 0 && (
         <>
-          <h2 className="rt-title">Yesterday’s loose ends</h2>
-          <p className="rt-sub">Decide once, then let them go.</p>
+          <h2 className="rt-title">{allYesterday ? 'Yesterday’s loose ends' : 'Loose ends'}</h2>
+          <p className="rt-sub">{missed.length === 1 ? 'Decide once, then let it go.' : 'Decide once, then let them go.'}</p>
           <ul className="rt-list">
-            {missed.map((t) => (
-              <li key={t.id} className="rt-row" data-cat={t.category}>
-                <span className="rt-dot" aria-hidden="true" />
-                <span className="rt-row-title">{t.title}</span>
-                <span className="rt-actions">
-                  <button type="button" className="chip-btn" onClick={() => carry(t, 'inbox')}>Keep</button>
-                  <button type="button" className="chip-btn" onClick={() => carry(t, 'done')}>Done</button>
-                  <button type="button" className="chip-btn" onClick={() => carry(t, 'drop')} aria-label={`Drop ${t.title}`}>
-                    <Icon name="trash" size={14} />
-                  </button>
-                </span>
-              </li>
-            ))}
+            {missed.map((t) =>
+              dropped.has(t.id) ? (
+                <li key={t.id} className="rt-row" data-cat={t.category}>
+                  <span className="rt-dropped">
+                    Dropped “{t.title}” ·{' '}
+                    <button type="button" className="link" onClick={() => setDrop(t.id, false)}>
+                      Undo
+                    </button>
+                  </span>
+                </li>
+              ) : (
+                <li key={t.id} className="rt-row" data-cat={t.category}>
+                  <span className="rt-dot" aria-hidden="true" />
+                  <span className="rt-row-title">
+                    {t.title} <small>{whenMissed(t)}</small>
+                  </span>
+                  <span className="rt-actions">
+                    <button type="button" className="chip-btn" onClick={() => carry(t, 'inbox')}>Keep</button>
+                    <button type="button" className="chip-btn" onClick={() => carry(t, 'done')}>Done</button>
+                    <button type="button" className="chip-btn rt-drop" onClick={() => carry(t, 'drop')} aria-label={`Drop ${t.title}`}>
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </span>
+                </li>
+              ),
+            )}
             {missed.length === 0 && <li className="rt-empty">All clear. Nothing left over.</li>}
           </ul>
           <div className="rt-foot">
             <span />
-            <button type="button" className="btn btn--primary" onClick={() => setStep(1)}>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => {
+                commitDrops();
+                setStep(1);
+              }}
+            >
               Next <Icon name="right" size={16} />
             </button>
           </div>
@@ -278,7 +328,7 @@ function ShutdownFlow() {
           )}
           {open.length > 0 ? (
             <>
-              <p className="rt-sub">Still open. Move them so tomorrow starts clean.</p>
+              <p className="rt-sub">{open.length === 1 ? 'One still open. Move it so tomorrow starts clean.' : 'Still open. Move them so tomorrow starts clean.'}</p>
               <ul className="rt-list">
                 {open.map((o) => (
                   <li key={o.task.id} className="rt-row" data-cat={o.task.category}>

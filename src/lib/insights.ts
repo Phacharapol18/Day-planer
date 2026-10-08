@@ -20,7 +20,10 @@ export interface WeekStats {
   days: DayStats[];
   totals: Record<CategoryId, number>;
   planned: number;
+  /** Every block this week, including ones still ahead. */
   count: number;
+  /** Blocks that have ended, or were finished early: the ones completion is measured against. */
+  due: number;
   done: number;
   completion: number | null;
   avgMood: number | null;
@@ -32,11 +35,16 @@ export interface WeekStats {
 
 const zero = (): Record<CategoryId, number> => ({ work: 0, health: 0, social: 0, errand: 0, meeting: 0, personal: 0 });
 
-export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStart: DateKey, today: DateKey): WeekStats {
+/**
+ * `nowMin` is the current minute of `today`. Blocks still ahead (later today, later this week) are
+ * neither done nor missed yet, so they are left out of completion and highlights.
+ */
+export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStart: DateKey, today: DateKey, nowMin = 24 * 60): WeekStats {
   const days: DayStats[] = [];
   const totals = zero();
   let hit = 0;
   let set = 0;
+  let due = 0;
   for (let i = 0; i < 7; i++) {
     const date = addDays(weekStart, i);
     const occ = occurrencesOn(data.tasks as Task[], date);
@@ -46,10 +54,12 @@ export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStar
       byCat[o.task.category] += m;
       totals[o.task.category] += m;
     }
+    due += occ.filter((o) => o.done || date < today || (date === today && o.end <= nowMin)).length;
     const e = data.journal[date];
     if (e?.highlight) {
-      set++;
-      if (occ.some((o) => o.task.id === e.highlight && o.done)) hit++;
+      const gotDone = occ.some((o) => o.task.id === e.highlight && o.done);
+      if (gotDone || date < today) set++;
+      if (gotDone) hit++;
     }
     days.push({
       date,
@@ -69,8 +79,9 @@ export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStar
     totals,
     planned: days.reduce((s, d) => s + d.total, 0),
     count,
+    due,
     done,
-    completion: count ? done / count : null,
+    completion: due ? done / due : null,
     avgMood: moods.length ? moods.reduce((a, b) => a + b, 0) / moods.length : null,
     streak: streak(data.journal, today),
     bestStreak: bestStreak(data.journal),

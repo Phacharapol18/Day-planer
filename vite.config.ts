@@ -35,5 +35,7 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
+    // Vitest blanks CSS by default; the contrast test reads the real design tokens.
+    css: { include: [/tokens\.css/] },
   },
 });

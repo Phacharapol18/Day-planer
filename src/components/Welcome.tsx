@@ -5,12 +5,20 @@ import { Icon } from './Icon';
 import { exampleDay } from '../lib/example';
 import { minutesNow } from '../lib/time';
 import { Planner, isNative } from '../native/planner';
+import { voiceAvailable } from '../native/voice';
+
+/** Keyboard and mouse users start on the primary button; on touch nothing is pre-focused (no stray ring). */
+const focusPrimary = (el: HTMLDialogElement) => {
+  const fine = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+  const primary = fine ? el.querySelector<HTMLElement>('[data-autofocus]') : null;
+  (primary ?? el).focus();
+};
 
 /** First run only: three short screens, then an example day or a blank page. */
 export function Welcome() {
   const { panel, setPanel } = usePlanner();
   return (
-    <Dialog open={panel === 'welcome'} onClose={() => setPanel(null)} label="Welcome to Day Planner" className="welcome">
+    <Dialog open={panel === 'welcome'} onClose={() => setPanel(null)} label="Welcome to Day Planner" className="welcome" initialFocus={focusPrimary}>
       <WelcomeBody />
     </Dialog>
   );
@@ -83,7 +91,12 @@ function WelcomeBody() {
           <p className="wl-kicker">Capture</p>
           <h2 className="wl-title">Say it how you’d say it.</h2>
           <p className="wl-text">
-            “Dentist fri 3pm”, “Taxes 2h !!”, “Standup 9:30 every weekday”. Type, speak, or share from any app — anything without a time waits in your inbox.
+            “Dentist fri 3pm”, “Taxes 2h !!”, “Standup 9:30 every weekday”.{' '}
+            {isNative
+              ? 'Type, speak, or share from any app — anything without a time waits in your inbox.'
+              : voiceAvailable()
+                ? 'Type it or say it — anything without a time waits in your inbox.'
+                : 'Just type it — anything without a time waits in your inbox.'}
           </p>
         </>
       )}
@@ -118,13 +131,13 @@ function WelcomeBody() {
           <button type="button" className="btn btn--quiet" onClick={() => void finish(false)}>
             Skip
           </button>
-          <button type="button" className="btn btn--primary btn--lg" onClick={() => setStep(step + 1)} data-testid="welcome-next" autoFocus>
+          <button type="button" className="btn btn--primary btn--lg" onClick={() => setStep(step + 1)} data-testid="welcome-next" data-autofocus>
             Next <Icon name="right" size={18} />
           </button>
         </div>
       ) : (
         <div className="wl-foot wl-foot--final">
-          <button type="button" className="btn btn--primary btn--lg" onClick={() => void finish(true)} data-testid="welcome-example" autoFocus>
+          <button type="button" className="btn btn--primary btn--lg" onClick={() => void finish(true)} data-testid="welcome-example" data-autofocus>
             Show me an example day
           </button>
           <button type="button" className="btn btn--quiet" onClick={() => void finish(false)} data-testid="welcome-blank">

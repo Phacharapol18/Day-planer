@@ -9,13 +9,16 @@
   --surface-2: #f0ece5;
   --ink: #1f1d1a;
   --ink-2: #4a463f;
-  --muted: #7a746a;
-  --faint: #a8a196;
+  --muted: #6b655c; /* secondary text: 4.9:1 or better on every light surface */
+  --faint: #a8a196; /* decoration only (separators); never text or control outlines */
   --line: rgba(31, 29, 26, 0.09);
   --line-strong: rgba(31, 29, 26, 0.16);
   --accent: #d4502a;
   --accent-ink: #ffffff;
   --accent-soft: rgba(212, 80, 42, 0.12);
+  --accent-strong: #b8421d; /* accent as small text or under white text (AA) */
+  --danger: #c0342b;
+  --surface-raised: var(--surface); /* controls that sit above surface-2 */
   --focus: #2f6fde;
   --ok: #2f7d4f;
   --shadow-sm: 0 1px 2px rgba(31, 29, 26, 0.06), 0 1px 1px rgba(31, 29, 26, 0.04);
@@ -60,6 +63,9 @@
     --accent: #f0703f;
     --accent-ink: #1a0d07;
     --accent-soft: rgba(240, 112, 63, 0.16);
+    --accent-strong: #f0703f;
+    --danger: #ff8a80;
+    --surface-raised: #2c2a26;
     --focus: #7aa5ff;
     --ok: #5fc48a;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -90,6 +96,9 @@
   --accent: #f0703f;
   --accent-ink: #1a0d07;
   --accent-soft: rgba(240, 112, 63, 0.16);
+  --accent-strong: #f0703f;
+  --danger: #ff8a80;
+  --surface-raised: #2c2a26;
   --focus: #7aa5ff;
   --ok: #5fc48a;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);

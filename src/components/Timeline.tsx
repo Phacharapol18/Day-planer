@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { usePlanner } from '../state';
 import { useDrag } from '../drag';
-import { type Occurrence, makeTask, occurrencesOn } from '../lib/model';
+import { type Occurrence, type Priority, PRIORITY_LABEL, makeTask, occurrencesOn } from '../lib/model';
 import { layoutColumns, freeGaps } from '../lib/layout';
 import { formatDuration, formatHourLabel, formatTime, minutesNow, diffDays, MINUTES_PER_DAY, SNAP, clamp } from '../lib/time';
 import { Icon } from './Icon';
@@ -59,7 +59,9 @@ export function Timeline() {
     const el = scrollRef.current;
     if (!el) return;
     const target = isToday ? (nowMin < dayStart ? dayStart - 60 : nowMin - 90) : Math.min(dayStart, occs[0]?.start ?? dayStart) - 30;
-    el.scrollTop = Math.max(0, target * pxPerMin);
+    // Snap to an hour so the top label is never cut in half (12px = .tl-grid's top margin).
+    const snapped = Math.floor(target / 60) * 60;
+    el.scrollTop = Math.max(0, snapped * pxPerMin + 12 - 16);
   }, [selected, hourHeight]);
 
   const openNew = useCallback(
@@ -93,7 +95,7 @@ export function Timeline() {
         <div className="tl-grid" style={{ height: 24 * hourHeight }}>
           <div className="tl-gutter" aria-hidden="true">
             {HOURS.map((h) => (
-              <div key={h} className="tl-hour-label" style={{ top: h * hourHeight }}>
+              <div key={h} className={`tl-hour-label${isToday && Math.abs(h * 60 - nowMin) * pxPerMin < 14 ? ' is-under-now' : ''}`} style={{ top: h * hourHeight }}>
                 {h === 0 ? '' : formatHourLabel(h, use24h)}
               </div>
             ))}
@@ -208,12 +210,16 @@ export function Timeline() {
 
 function EmptyDay({ past }: { past: boolean }) {
   const { setPanel } = usePlanner();
+  // Drawing a block is mouse-only (touch drags scroll the day), so touch gets touch instructions.
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   return (
     <div className="tl-empty" role="note">
       <p className="tl-empty-title">{past ? 'Nothing was planned this day.' : 'A blank page.'}</p>
       {!past && (
         <p className="tl-empty-hint">
-          Drag across the timeline to block time, drop tasks from your inbox, or{' '}
+          {coarse
+            ? 'Tap the timeline to block time, long-press inbox tasks to drag them in, or'
+            : 'Drag across the timeline to block time, drop tasks from your inbox, or'}{' '}
           <button type="button" className="link" onClick={() => setPanel('quickadd')}>
             type it in plain words
           </button>
@@ -346,7 +352,11 @@ const Block = memo(function Block({ occ, highlight, col, pxPerMin, use24h, nowMi
         <span className="block-time">
           {timeLabel} · {formatDuration(end - start)}
           {task.repeat !== 'none' && <Icon name="repeat" size={11} className="block-meta-icon" />}
-          {task.priority === 3 && <span className="block-prio" aria-label="High priority">!</span>}
+          {task.priority > 0 && (
+            <span className={`block-prio prio prio--${task.priority}`} aria-label={`${PRIORITY_LABEL[task.priority as Priority]} priority`}>
+              {'!'.repeat(task.priority)}
+            </span>
+          )}
         </span>
         {!compact && height > 64 && task.notes && <span className="block-notes">{task.notes}</span>}
       </div>

@@ -36,7 +36,7 @@ export function SlipBanner() {
       <span className="slip-text">
         <strong>{slipped.length === 1 ? `“${slipped[0].title}” slipped.` : `${slipped.length} blocks slipped.`}</strong> No stress — move {slipped.length === 1 ? 'it' : 'them'} into the rest of today.
       </span>
-      <button type="button" className="btn btn--sm btn--primary" onClick={replan} data-testid="slip-replan">
+      <button type="button" className="btn btn--sm slip-btn" onClick={replan} data-testid="slip-replan">
         <Icon name="sparkle" size={14} /> Re-plan {!isPro && <span className="pro-chip">Pro</span>}
       </button>
       <button type="button" className="icon-btn" onClick={() => setDismissed(key)} aria-label="Dismiss">

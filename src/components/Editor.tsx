@@ -21,10 +21,20 @@ export function Editor() {
   }, [editor, source, setEditor]);
 
   return (
-    <Dialog open={open} onClose={() => setEditor(null)} label={editor?.mode === 'new' ? 'New block' : 'Edit task'} className="editor">
+    <Dialog open={open} onClose={() => setEditor(null)} label={editor?.mode === 'new' ? 'New block' : 'Edit task'} className="editor" initialFocus={(el) => focusTitle(el, editor?.mode === 'new')}>
       {open && <EditorForm key={editor.mode === 'new' ? editor.draft.id : editor.id} source={source} isNew={editor.mode === 'new'} occurrenceDate={editor.mode === 'edit' ? editor.date : null} />}
     </Dialog>
   );
+}
+
+/** New blocks start in the title. Existing ones select it only with a mouse; on touch nothing opens the keyboard. */
+function focusTitle(el: HTMLDialogElement, isNew: boolean) {
+  const title = el.querySelector<HTMLInputElement>('[data-testid="editor-title"]');
+  const fine = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
+  if (title && (isNew || fine)) {
+    title.focus();
+    if (!isNew) title.select();
+  } else el.focus();
 }
 
 function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: boolean; occurrenceDate: string | null }) {
@@ -43,11 +53,6 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
     setFocusStep(null);
   }, [focusStep]);
   const set = <K extends keyof Task>(k: K, v: Task[K]) => setT((x) => ({ ...x, [k]: v }));
-
-  useEffect(() => {
-    titleRef.current?.focus();
-    if (!isNew) titleRef.current?.select();
-  }, [isNew]);
 
   const close = () => setEditor(null);
 
@@ -292,8 +297,7 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
 
       {repeating && <p className="editor-note"><Icon name="repeat" size={14} /> Changes apply to every occurrence.</p>}
 
-      <div className="editor-foot">
-        {!isNew && (
+      {!isNew && (
           <div className="editor-secondary">
             {repeating && occurrenceDate ? (
               <>
@@ -320,7 +324,7 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
                   toast(isHighlight ? 'Highlight cleared' : `“${t.title}” is the day’s one thing`);
                 }}
               >
-                <Icon name="flag" size={15} /> {isHighlight ? 'Highlighted' : 'Make highlight'}
+                <Icon name="flag" size={15} /> Highlight
               </button>
             )}
             <button
@@ -335,7 +339,8 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
               <Icon name="copy" size={15} /> Duplicate
             </button>
           </div>
-        )}
+      )}
+      <div className="editor-foot">
         <div className="editor-primary">
           <button type="button" className="btn btn--quiet" onClick={close}>
             Cancel

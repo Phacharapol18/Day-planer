@@ -94,7 +94,7 @@ test.describe('desktop', () => {
     // No time → inbox, with a due date chip.
     await page.keyboard.press('n');
     await page.getByTestId('quickadd-input').fill('Pay rent fri');
-    await expect(page.locator('.qa-dest')).toHaveText(/Inbox · due Tomorrow/);
+    await expect(page.locator('.qa-dest')).toHaveText(/Inbox · due tomorrow/);
     await page.getByTestId('quickadd-input').press('Enter');
     await expect(page.getByTestId('inbox-item').filter({ hasText: 'Pay rent' })).toContainText('Tmrw');
 
@@ -353,6 +353,34 @@ test.describe('mobile', () => {
     expect(errors).toEqual([]);
   });
 
+  test('phone sheets: Save stays on screen, quick add has an Add button, no keyboard on edit', async ({ page }) => {
+    const steps = ['Outline', 'Size it', 'Write it up'].map((text, i) => ({ id: `st${i}`, text }));
+    await boot(page, { tasks: [task({ title: 'Deep work', date: TODAY, start: 11 * 60, duration: 120, notes: 'Draft the bets.', steps, stepsDone: {} })] });
+    const vh = page.viewportSize()!.height;
+
+    // Editor: a long form, but Cancel/Save stay inside the viewport, and nothing is focused (no keyboard).
+    await block(page, 'Deep work').click();
+    const editor = page.getByRole('dialog', { name: 'Edit task' });
+    await expect(editor).toBeVisible();
+    const save = (await page.getByTestId('editor-save').boundingBox())!;
+    expect(save.y + save.height).toBeLessThanOrEqual(vh);
+    expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('DIALOG');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    // Quick add: a visible Add button (no Enter key needed), no desktop keycaps.
+    await page.getByRole('button', { name: 'Add', exact: true }).last().click();
+    await expect(page.locator('.qa-keys')).toBeHidden();
+    await expect(page.getByTestId('quickadd-submit')).toBeDisabled();
+    await page.getByTestId('quickadd-input').fill('Stretch 4pm 15m');
+    await page.getByTestId('quickadd-submit').click();
+    await expect(block(page, 'Stretch')).toHaveAttribute('aria-label', /4pm – 4:15pm/);
+
+    // The now-pill sits in the gutter, fully on screen.
+    const pill = (await page.locator('.now-pill').boundingBox())!;
+    expect(pill.x).toBeGreaterThanOrEqual(0);
+    expect(pill.x + pill.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+
   test('long-press drags a block on touch', async ({ page }) => {
     await boot(page, { tasks: [task({ title: 'Walk', date: TODAY, start: 13 * 60 })] });
     await yFor(page, 13 * 60);
@@ -482,6 +510,27 @@ test.describe('rituals', () => {
     await expect(page.getByTestId('inbox-item').filter({ hasText: 'Old call' })).toBeVisible();
   });
 
+  test('morning plan: dropping a loose end can be undone before moving on', async ({ page }) => {
+    await boot(page, {
+      tasks: [task({ title: 'Old call', date: '2026-10-07', start: 16 * 60, duration: 15 }), task({ title: 'Stale idea', date: '2026-10-07', start: 17 * 60, duration: 15 })],
+      pro: true,
+    });
+    await page.getByTestId('ritual-cta').click();
+    const r = page.getByTestId('ritual-plan');
+    await expect(r.getByRole('heading')).toHaveText('Yesterday’s loose ends');
+    await expect(r).toContainText('Yesterday · 4pm');
+    await r.getByRole('button', { name: 'Drop Old call' }).click();
+    await expect(r).toContainText('Dropped “Old call”');
+    await r.getByRole('button', { name: 'Undo' }).click();
+    await expect(r.getByRole('button', { name: 'Drop Old call' })).toBeVisible();
+    await r.getByRole('button', { name: 'Drop Stale idea' }).click();
+    await r.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Close' }).first().click();
+    // "Stale idea" is gone; "Old call" was kept and is still a missed task.
+    await expect(page.getByTestId('inbox-item').filter({ hasText: 'Stale idea' })).toHaveCount(0);
+    await expect(page.getByTestId('inbox-item').filter({ hasText: 'Old call' })).toHaveCount(1);
+  });
+
   test('evening shutdown: move leftovers to tomorrow, reflect, carry a note forward', async ({ page }) => {
     await page.clock.setFixedTime(new Date(2026, 9, 8, 18, 30));
     const errors: string[] = [];
@@ -548,7 +597,9 @@ test.describe('insights', () => {
     const ins = page.getByTestId('insights');
     await expect(ins.getByText('This week')).toBeVisible();
     await expect(ins.locator('.ins-tile').first()).toContainText('4h 15m'); // 2h + 1h + 5×15m
-    await expect(ins.locator('.ins-tile').nth(1)).toContainText('29%'); // 2 of 7 done
+    // 2 done of the 6 blocks that have ended by Thu 10:00 (Friday's standup is still ahead).
+    await expect(ins.locator('.ins-tile').nth(1)).toContainText('33%');
+    await expect(ins.locator('.ins-tile').nth(1)).toContainText('2 of 6 so far');
     await expect(ins.getByRole('list', { name: 'Categories' })).toContainText('Deep work');
     const mon = ins.getByRole('button', { name: /^Mon: 2h 15m planned, 1 of 2 done/ });
     await mon.hover();

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePlanner } from '../state';
 import { useDrag } from '../drag';
 import { usePlanActions } from '../actions';
-import { type Task, inboxTasks, missedTasks } from '../lib/model';
+import { type Task, type Priority, PRIORITY_LABEL, inboxTasks, missedTasks } from '../lib/model';
 import { formatDuration, formatTime, monthDay, shortDueLabel } from '../lib/time';
 import { Icon } from './Icon';
 import { usePro } from '../pro/ProProvider';
@@ -104,7 +104,12 @@ export function Inbox({ id }: { id?: string }) {
         )}
       </div>
       <p className="inbox-tip">
-        <kbd>Drag</kbd> onto the timeline · <kbd>long-press</kbd> on touch
+        <span className="tip-fine">
+          <kbd>Drag</kbd> a task onto the timeline, or <Icon name="calPlus" size={13} /> for the next free slot
+        </span>
+        <span className="tip-coarse">
+          Long-press a task to drag it onto the timeline, or tap <Icon name="calPlus" size={13} /> for the next free slot
+        </span>
       </p>
     </aside>
     </>
@@ -140,14 +145,14 @@ function InboxItem({ task, missedOn, onOpen, onDone }: { task: Task; missedOn?: 
             onOpen();
           }
         }}
-        aria-label={`${task.title}. ${formatDuration(task.duration)}. Open details`}
+        aria-label={`${task.title}. ${formatDuration(task.duration)}${task.due ? `. Due ${shortDueLabel(task.due, today)}` : ''}${task.priority > 0 ? `. ${PRIORITY_LABEL[task.priority as Priority]} priority` : ''}. Open details`}
       >
         <span className="task-title">{task.title}</span>
         <span className="task-meta">
           <span className="task-dot" aria-hidden="true" />
           {formatDuration(task.duration)}
           {missedOn && <span className="chip chip--late">{missedOn}</span>}
-          {!missedOn && task.due && <span className={`chip${task.due < today ? ' chip--late' : ''}`}>{shortDueLabel(task.due, today)}</span>}
+          {!missedOn && task.due && <span className={`chip${task.due < today ? ' chip--late' : ''}`}>{task.due < today ? shortDueLabel(task.due, today) : `Due ${shortDueLabel(task.due, today)}`}</span>}
           {task.priority > 0 && (
             <span className={`prio prio--${task.priority}`} aria-label={`Priority ${task.priority}`}>
               {'!'.repeat(task.priority)}

@@ -33,6 +33,8 @@ function QuickAddForm() {
   const scheduled = p.start !== null;
 
   const dayName = (d: string) => (Math.abs(diffDays(d, today)) <= 1 ? relativeDayName(d, today) : `${relativeDayName(d, today)}, ${monthDay(d)}`);
+  // "due tomorrow", but "due Friday, Oct 9"
+  const dueName = (d: string) => (Math.abs(diffDays(d, today)) <= 1 ? relativeDayName(d, today).toLowerCase() : dayName(d));
 
   const listen = async () => {
     setListening(true);
@@ -77,7 +79,7 @@ function QuickAddForm() {
       <div className="qa-input-row">
         <Icon name="plus" size={20} className="qa-icon" />
         <textarea
-          autoFocus
+          data-autofocus
           rows={1}
           className="qa-input"
           value={text}
@@ -93,7 +95,7 @@ function QuickAddForm() {
               submit(e.metaKey || e.ctrlKey);
             }
           }}
-          placeholder="What’s next?  Try “Lunch with Mia 12:30 1h”"
+          placeholder="What’s next?"
           aria-label="Describe a task in plain words"
           aria-describedby="qa-preview"
           data-testid="quickadd-input"
@@ -119,7 +121,7 @@ function QuickAddForm() {
                   <li key={i}>
                     <span className="qa-multi-name">{q.title || <em>Add a title</em>}</span>
                     <span className="qa-multi-meta">
-                      {q.start !== null ? `${dayName(q.date!)} · ${formatTime(q.start, use24h)}` : q.date ? `Inbox · due ${dayName(q.date)}` : 'Inbox'}
+                      {q.start !== null ? `${dayName(q.date!)} · ${formatTime(q.start, use24h)}` : q.date ? `Inbox · due ${dueName(q.date)}` : 'Inbox'}
                       {q.duration ? ` · ${formatDuration(q.duration)}` : ''}
                     </span>
                   </li>
@@ -131,7 +133,7 @@ function QuickAddForm() {
           <>
             <span className={`qa-dest${scheduled ? ' is-scheduled' : ''}`}>
               <Icon name={scheduled ? 'clock' : 'inbox'} size={14} />
-              {scheduled ? `${dayName(p.date!)} · ${formatTime(p.start!, use24h)}–${formatTime(p.start! + (p.duration ?? 60), use24h)}` : p.date ? `Inbox · due ${dayName(p.date)}` : 'Inbox'}
+              {scheduled ? `${dayName(p.date!)} · ${formatTime(p.start!, use24h)}–${formatTime(p.start! + (p.duration ?? 60), use24h)}` : p.date ? `Inbox · due ${dueName(p.date)}` : 'Inbox'}
             </span>
             <span className="qa-title">{p.title || <em>Add a title</em>}</span>
             <span className="qa-chips">
@@ -162,7 +164,7 @@ function QuickAddForm() {
               ))}
             </ul>
             <p className="qa-legend">
-              <code>9am</code> <code>2-3:30pm</code> <code>45m</code> <code>tomorrow</code> <code>fri</code> <code>!!</code> <code>#health</code> <code>daily</code>
+              Understands: <code>9am</code> <code>2-3:30pm</code> <code>45m</code> <code>tomorrow</code> <code>fri</code> <code>!!</code> <code>#health</code> <code>daily</code>
             </p>
           </div>
         )}
@@ -175,6 +177,9 @@ function QuickAddForm() {
         <span className="qa-keys">
           <kbd>↵</kbd> add <kbd>⇧↵</kbd> another <kbd>esc</kbd> close
         </span>
+        <button type="submit" className="btn btn--primary btn--sm qa-submit" disabled={!text.trim()} data-testid="quickadd-submit">
+          {multi ? `Add ${items.length}` : 'Add'}
+        </button>
       </div>
     </form>
   );

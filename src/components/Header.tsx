@@ -2,11 +2,12 @@ import { useMemo } from 'react';
 import { usePlanner } from '../state';
 import { occurrencesOn } from '../lib/model';
 import { mergeBusy } from '../lib/layout';
-import { addDays, diffDays, fromKey, monthDay, weekday, weekdayName, formatDuration, minutesNow, DAY_NAMES_SHORT, relativeDayName } from '../lib/time';
+import { addDays, diffDays, fromKey, monthDay, weekday, weekdayName, formatDuration, minutesNow, DAY_NAMES_SHORT, relativeDayName, SNAP } from '../lib/time';
 import { Icon } from './Icon';
 import { useCalendar } from '../calendar';
 import { usePro } from '../pro/ProProvider';
 import { streak } from '../lib/journal';
+import { combo } from '../lib/platform';
 
 export function Header() {
   const { data, selected, setSelected, today, now, setPanel } = usePlanner();
@@ -40,7 +41,8 @@ export function Header() {
     const planned = mergeBusy(occ).reduce((s, b) => s + (b.end - b.start), 0);
     const doneCount = occ.filter((o) => o.done).length;
     const isToday = selected === today;
-    const from = isToday ? Math.max(dayStart, minutesNow(now)) : dayStart;
+    // Same origin as the timeline's free slots (now, rounded up to the 15-minute grid), so the numbers agree.
+    const from = isToday ? Math.max(dayStart, Math.ceil(minutesNow(now) / SNAP) * SNAP) : dayStart;
     const events = eventsOn(selected);
     const remainingBusy = mergeBusy([...occ, ...events]).reduce((s, b) => s + Math.max(0, Math.min(b.end, dayEnd) - Math.max(b.start, from)), 0);
     const free = diffDays(selected, today) < 0 ? 0 : Math.max(0, dayEnd - from - remainingBusy);
@@ -70,9 +72,9 @@ export function Header() {
               <Icon name={ritual === 'plan' ? 'sun' : 'check'} size={16} /> {ritual === 'plan' ? 'Plan day' : 'Shut down'}
             </button>
           )}
-          <button type="button" className="btn btn--primary" onClick={() => setPanel('quickadd')} aria-keyshortcuts="Control+K Meta+K N">
+          <button type="button" className="btn btn--primary hide-sm" onClick={() => setPanel('quickadd')} aria-keyshortcuts="Control+K Meta+K N">
             <Icon name="plus" size={16} /> <span className="hide-sm">Add</span>
-            <kbd className="hide-sm">⌘K</kbd>
+            <kbd className="hide-sm">{combo('K')}</kbd>
           </button>
           <button type="button" className="btn btn--quiet hide-sm" onClick={() => setPanel('focus')} aria-keyshortcuts="F">
             <Icon name="target" size={16} /> Focus
@@ -134,28 +136,40 @@ export function Header() {
           <span style={{ transform: `scaleX(${summary.pct / 100})` }} />
         </div>
         <p className="summary-text">
-          <strong>
-            {summary.doneCount}/{summary.total}
-          </strong>{' '}
-          done
-          <span className="dot-sep" aria-hidden="true" />
-          <strong>{formatDuration(summary.planned)}</strong> planned
+          {summary.total > 0 && (
+            <>
+              <span className="stat">
+                <strong>
+                  {summary.doneCount}/{summary.total}
+                </strong>{' '}
+                done
+              </span>
+              <span className="dot-sep" aria-hidden="true" />
+              <span className="stat">
+                <strong>{formatDuration(summary.planned)}</strong> planned
+              </span>
+            </>
+          )}
           {summary.events > 0 && (
             <>
-              <span className="dot-sep" aria-hidden="true" />
-              <strong>{summary.events}</strong> {summary.events === 1 ? 'event' : 'events'}
+              {summary.total > 0 && <span className="dot-sep" aria-hidden="true" />}
+              <span className="stat">
+                <strong>{summary.events}</strong> {summary.events === 1 ? 'event' : 'events'}
+              </span>
             </>
           )}
           {summary.free > 0 && (
             <>
-              <span className="dot-sep" aria-hidden="true" />
-              <strong>{formatDuration(summary.free)}</strong> free{selected === today ? ' left' : ''}
+              {(summary.total > 0 || summary.events > 0) && <span className="dot-sep" aria-hidden="true" />}
+              <span className="stat">
+                <strong>{formatDuration(summary.free)}</strong> free{selected === today ? ' left' : ''}
+              </span>
             </>
           )}
         </p>
         {currentStreak > 0 && (
           <button type="button" className="streak-chip" title="Days in a row you planned or closed your day · open Insights" onClick={() => setPanel('insights')} data-testid="streak">
-            <Icon name="flag" size={13} /> {currentStreak}-day streak
+            <Icon name="flame" size={13} /> {currentStreak}-day streak
           </button>
         )}
       </div>
