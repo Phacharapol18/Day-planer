@@ -135,21 +135,24 @@ await step('seeded plan renders and syncs to native', async () => {
 
 await step('ongoing Now card appears in the notification shade', async () => {
   await waitFor(() => sh('dumpsys notification --noredact').includes('Smoke focus block'), 'Now notification');
+  // SystemUI renders the card asynchronously after the shade opens: wait for its own "visible" event
+  // (system event log) before capturing, instead of guessing a delay.
+  const shown = () => adb('logcat', '-d', '-b', 'events').split('\n').filter((l) => /notification_visibility.*\|com\.phacharapol\.dayplanner\|1\|[^,]*,1,/.test(l)).length;
+  const before = shown();
   sh('cmd statusbar expand-notifications');
+  await waitFor(() => shown() > before, 'Now card rendered in the shade', 15000);
+  await sleep(500);
+  const png = await device.screenshot();
+  writeFileSync(`${OUT}/02-now-card.png`, png);
   // Inline in the log: how the shade lays out the Now card (expanded, actions visible) is part of the check.
-  for (const [file, at] of [['02-now-card.png', 1200], ['02b-now-card.png', 6000]]) {
-    await sleep(at === 1200 ? at : at - 1200);
-    const png = await device.screenshot();
-    writeFileSync(`${OUT}/${file}`, png);
-    console.log(`  ${file} at device time ${sh('date +%T').trim()}`);
-    console.log(`::group::png ${file}\nPNG-BEGIN ${file}\n${png.toString('base64')}\nPNG-END\n::endgroup::`);
-  }
+  console.log(`::group::png 02-now-card.png\nPNG-BEGIN 02-now-card.png\n${png.toString('base64')}\nPNG-END\n::endgroup::`);
 });
 
 await step('tapping Done on the Now card completes the block in the app', async () => {
   // The Now card's live countdown keeps the UI from ever being "idle", so `uiautomator dump`
   // can't snapshot it; Playwright's Android driver finds and taps the button directly.
-  await device.tap({ text: 'Done' }, { timeout: 15000 });
+  // Each lookup waits out the driver's idle timeout (the countdown never idles): ~8s per tap on CI.
+  await device.tap({ text: 'Done' }, { timeout: 30000 });
   await sleep(800);
   sh('cmd statusbar collapse');
   await waitFor(async () => {
@@ -162,6 +165,10 @@ await step('tapping Done on the Now card completes the block in the app', async 
     .split('\n')
     .filter((l) => /notification_(enqueue|cancel|canceled|visibility|expansion|clicked|action_clicked)/.test(l) && l.includes(PKG));
   console.log(`  notification events (${events.length}):\n    ${events.slice(-40).join('\n    ')}`);
+  // Updates are fine; a cancel before the user acted means the card flickered off and back on.
+  const clicked = events.findIndex((l) => l.includes('notification_action_clicked'));
+  if (clicked < 0) throw new Error('no notification_action_clicked event for the Done tap');
+  if (events.slice(0, clicked).some((l) => l.includes('notification_canceled'))) throw new Error('Now card was cancelled before Done was tapped');
 });
 
 await step('share text from another app lands in the inbox', async () => {
