@@ -1,0 +1,107 @@
+:root {
+  color-scheme: light;
+  --font-ui: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces Variable', ui-serif, Georgia, serif;
+
+  /* Paper & ink */
+  --bg: #f6f3ee;
+  --surface: #fffdf9;
+  --surface-2: #f0ece5;
+  --ink: #1f1d1a;
+  --ink-2: #4a463f;
+  --muted: #7a746a;
+  --faint: #a8a196;
+  --line: rgba(31, 29, 26, 0.09);
+  --line-strong: rgba(31, 29, 26, 0.16);
+  --accent: #d4502a;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(212, 80, 42, 0.12);
+  --focus: #2f6fde;
+  --ok: #2f7d4f;
+  --shadow-sm: 0 1px 2px rgba(31, 29, 26, 0.06), 0 1px 1px rgba(31, 29, 26, 0.04);
+  --shadow-md: 0 8px 24px rgba(31, 29, 26, 0.1), 0 2px 6px rgba(31, 29, 26, 0.06);
+  --shadow-lg: 0 24px 60px rgba(31, 29, 26, 0.18), 0 6px 18px rgba(31, 29, 26, 0.08);
+  --scrim: rgba(31, 29, 26, 0.32);
+
+  /* Categories: strong hue for the rail, tinted fill for the block */
+  --cat-work: #5452c9;
+  --cat-meeting: #1f7fb8;
+  --cat-health: #2f8a57;
+  --cat-personal: #c25a32;
+  --cat-social: #a23f8c;
+  --cat-errand: #a7741a;
+  --block-tint: 13%;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --sidebar-w: 320px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #131210;
+    --surface: #1b1a17;
+    --surface-2: #24221e;
+    --ink: #eeeae3;
+    --ink-2: #c9c3b9;
+    --muted: #9b958a;
+    --faint: #6d685f;
+    --line: rgba(238, 234, 227, 0.08);
+    --line-strong: rgba(238, 234, 227, 0.15);
+    --accent: #f0703f;
+    --accent-ink: #1a0d07;
+    --accent-soft: rgba(240, 112, 63, 0.16);
+    --focus: #7aa5ff;
+    --ok: #5fc48a;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6);
+    --scrim: rgba(0, 0, 0, 0.55);
+    --cat-work: #8d8cf5;
+    --cat-meeting: #5cb3e6;
+    --cat-health: #62c48c;
+    --cat-personal: #ec8a62;
+    --cat-social: #d77ac0;
+    --cat-errand: #dcaa4f;
+    --block-tint: 22%;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #131210;
+  --surface: #1b1a17;
+  --surface-2: #24221e;
+  --ink: #eeeae3;
+  --ink-2: #c9c3b9;
+  --muted: #9b958a;
+  --faint: #6d685f;
+  --line: rgba(238, 234, 227, 0.08);
+  --line-strong: rgba(238, 234, 227, 0.15);
+  --accent: #f0703f;
+  --accent-ink: #1a0d07;
+  --accent-soft: rgba(240, 112, 63, 0.16);
+  --focus: #7aa5ff;
+  --ok: #5fc48a;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --cat-work: #8d8cf5;
+  --cat-meeting: #5cb3e6;
+  --cat-health: #62c48c;
+  --cat-personal: #ec8a62;
+  --cat-social: #d77ac0;
+  --cat-errand: #dcaa4f;
+  --block-tint: 22%;
+}
+
+[data-cat='work'] { --cat: var(--cat-work); }
+[data-cat='meeting'] { --cat: var(--cat-meeting); }
+[data-cat='health'] { --cat: var(--cat-health); }
+[data-cat='personal'] { --cat: var(--cat-personal); }
+[data-cat='social'] { --cat: var(--cat-social); }
+[data-cat='errand'] { --cat: var(--cat-errand); }
