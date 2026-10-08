@@ -1,64 +1,67 @@
 # Day Planner
 
-A timeline-first day planner. Capture tasks in an inbox, drag them onto your day, and see your free time at a glance. It works offline and installs as an app on phone or desktop.
+A timeline-first day planner for Android and the web. See your day as one calm timeline, drag things into place, protect your free time, and let gentle nudges keep you on track.
 
-![Day Planner on desktop](docs/screenshots/desktop.png)
+<p align="center">
+  <img src="docs/store/1-timeline.png" width="200" alt="Timeline">
+  <img src="docs/store/2-quickadd.png" width="200" alt="Quick add">
+  <img src="docs/store/3-focus.png" width="200" alt="Focus mode">
+  <img src="docs/store/4-insights.png" width="200" alt="Insights">
+</p>
 
-<p align="center"><img src="docs/screenshots/mobile.png" width="300" alt="Day Planner on a phone"></p>
+**Web:** https://phacharapol18.github.io/Day-planer/ · **Android:** built by CI (see [docs/android.md](docs/android.md)) · **Launch kit:** [docs/play-store.md](docs/play-store.md)
 
-**Live:** https://phacharapol18.github.io/Day-planer/
+## Features
 
-## What it does
+| | Free | Pro |
+|---|:-:|:-:|
+| Timeline with live now-line, drag / resize / draw blocks, free-time gaps | ✓ | ✓ |
+| Inbox, next-free-slot scheduling, missed tasks resurfaced | ✓ | ✓ |
+| Natural-language quick add, brain dump, voice capture, share-to-inbox | ✓ | ✓ |
+| Repeating routines with steps checklists | 3 | Unlimited |
+| Reminders before blocks, Focus mode, undo/redo, light/dark themes | ✓ | ✓ |
+| Morning plan & evening shutdown rituals, daily highlight, streaks | ✓ | ✓ |
+| **Auto-plan**: fill free time by priority | | ✓ |
+| **Re-plan slipped blocks** into the rest of the day | | ✓ |
+| **Phone calendars** (Google, Outlook, Samsung) on the timeline | | ✓ |
+| **Home-screen widgets** (Now & next, Today) | | ✓ |
+| **Live Now card** in notifications with Done / +15 min | | ✓ |
+| **Weekly insights** | headline stats | full breakdown |
 
-| | |
-|---|---|
-| **Timeline** | Your day as a vertical timeline with a live "now" line. Drag to move, drag the bottom edge to resize, or drag across empty time to draw a block. Overlapping blocks sit side by side. |
-| **Free time, visible** | Open stretches inside your working hours are labelled (`Free · 1h 30m`). Click one to fill it. |
-| **Inbox** | Unscheduled tasks, sorted by priority and due date. Drag a task onto the timeline, or press the calendar button to drop it into the next free slot. Drag a block back to the inbox to unschedule it. |
-| **Auto-plan** | Fills the day's free time with inbox tasks, highest priority first. Nothing gets overlapped, and it tells you what didn't fit. Fully undoable. |
-| **Plain-language add** | `⌘K` → `Lunch with Mia fri 12:30 1h #social !!` A live preview shows exactly where the task will land before you press Enter. |
-| **Missed tasks** | Unfinished blocks from earlier days resurface under *From earlier*, ready to reschedule. |
-| **Repeats** | Daily, weekdays, or weekly. Done state is tracked per day, and you can remove a single occurrence. |
-| **Focus mode** | `F`: the current block full-screen, with a countdown ring, Done / +15 min, and what's next. |
-| **Undo everything** | `⌘Z` / `⇧⌘Z`, plus an Undo button on every destructive toast. |
-| **Yours, offline** | Data stays in your browser. It syncs across open tabs, can be backed up and restored as JSON, and exports to any calendar app as `.ics`. Installable PWA with optional reminders when a block starts. |
-| **Accessible** | Every block can be operated from the keyboard (`↑↓` move, `⇧↑↓` resize, `Space` done, `↵` edit, `⌫` delete). Dialogs trap focus, colors adapt to light and dark mode, and reduced motion is respected. |
+Plans live on the device: no account, no ads, no tracking. Android Auto Backup carries them to a new phone, and JSON backup and `.ics` export are built in.
 
 ### Quick-add syntax
 
-| Type | Examples |
-|---|---|
-| Time | `9am` `14:30` `at 4` (→ 4pm) `noon` |
-| Range | `9-11:30` `2-3pm` `11-1pm` |
-| Duration | `45m` `1h` `1.5h` `1h30` `for 2 hours` |
-| Date | `today` `tomorrow` `fri` `next mon` `oct 20` `in 3 days` `by friday` |
-| Priority | `!` `!!` `!!!` `!high` `p1` |
-| Category | `#work` `#meeting` `#health` `#personal` `#social` `#errand` (plus aliases such as `#gym` and `#call`) |
-| Repeat | `daily` `every weekday` `weekly` `every monday` |
+`9am` · `2-3:30pm` · `45m` · `1.5h` · `tomorrow` · `fri` · `oct 20` · `by friday` · `!!` · `#health` · `daily` · `every weekday`. Without a time, the task goes to the inbox. Put several tasks in one input with new lines or "then / also": `call mom tomorrow then gym 6pm also buy milk`.
 
-With a time, the task goes on the timeline. Without one, it goes to the inbox, and any date becomes its due date.
+## Architecture
 
-## Develop
+```
+src/lib/        pure, unit-tested logic: model, parser, layout & free time, store + undo, storage,
+                journal/streaks, insights, replan, brain dump, snapshot, .ics, entitlement
+src/            React 19 + TypeScript UI (Vite, PWA)
+src/native/     Capacitor bridge: snapshot sync, pending actions, deep links, back button, voice
+src/pro/        Google Play Billing (Pro), paywall, gating
+android/        Capacitor 8 shell + native Java: alarms, notifications, widgets, calendar, tile, share
+```
+
+The web app is the source of truth. It pushes a snapshot of yesterday through the day after tomorrow to native storage, so alarms, the Now card and widgets work with the app closed. Anything done natively (Done, +15 min, shared text) is queued and replayed into the app. See [docs/android.md](docs/android.md).
+
+## Develop & test
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173
-npm test             # unit tests (parser, layout, store, storage)
-npm run build && npm run test:e2e   # Playwright, desktop + Pixel 7
+npm run dev                      # http://localhost:5173
+npm test                         # 60 unit tests
+npm run build && npm run test:e2e  # 33 Playwright tests (desktop + Pixel 7)
 ```
 
-The stack is React 19, TypeScript, and Vite, with `vite-plugin-pwa` for offline support. There is no UI framework and no date library. Times are stored as minutes from midnight on local calendar dates, so a 9:00 block stays at 9:00.
-
-```
-src/lib/      pure logic: model, natural-language parser, layout & free-time math, store + undo, storage, .ics
-src/drag.tsx  pointer-based drag engine (mouse, pen, touch long-press, edge auto-scroll)
-src/components/  Timeline, Inbox, Header, Editor, QuickAdd, Focus, Settings, Help, Toasts
-```
-
-### Deploying
-
-`.github/workflows/deploy.yml` runs typecheck, unit tests, the build, and the end-to-end tests on every push and pull request. On `main` it then publishes `dist/` to GitHub Pages. To enable it, go to **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**.
+Every push runs:
+- **Test & deploy**: typecheck, unit tests, e2e, then publishes the web app to GitHub Pages from `main`.
+- **Android**: lint, debug APK, a signed AAB once secrets are set, then the app on an **Android 14 emulator**:
+  - a 10-step device smoke test: Now card, notification Done button, share, deep links, Back, widgets, alarms, phone calendar, crash check;
+  - on-device widget render tests.
 
 ### Upgrading from v1
 
-Notes saved by the original hour-row scheduler are imported automatically into today's timeline the first time v2 opens.
+Notes saved by the original hour-row scheduler are imported into today's timeline automatically.
