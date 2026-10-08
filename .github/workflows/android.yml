@@ -30,20 +30,21 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx cap sync android
-      - name: Build debug APK
-        working-directory: android
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
       # EmojiCompat (via AppCompat) fetches its font from Play services at startup; while it holds that
       # provider, a Play services restart kills the app. The app removes the initializer: keep it removed.
       - name: Manifest guard (no EmojiCompat startup initializer)
         working-directory: android
         run: |
-          ./gradlew --no-daemon -q :app:dependencyInsight --dependency androidx.emoji2:emoji2 --configuration debugRuntimeClasspath | head -n 12 || true
-          lib=$(find ~/.gradle/caches -path '*emoji2-1*' -name AndroidManifest.xml | head -n 1)
-          echo "--- emoji2 library manifest: $lib"; cat "$lib" 2>/dev/null | grep -n -i "startup\|Initializer" || true
+          ./gradlew --no-daemon -q :app:processDebugMainManifest
+          for d in androidx.emoji2:emoji2 androidx.startup:startup-runtime; do
+            echo "--- why $d"; ./gradlew --no-daemon -q :app:dependencyInsight --dependency "$d" --configuration debugRuntimeClasspath | head -n 8 || true
+          done
           m=$(find app/build/intermediates -path '*merged_manifest*debug*' -name AndroidManifest.xml | head -n 1)
-          echo "--- merged app manifest: $m"; grep -n -i "androidx-startup\|Initializer" "$m" || true
+          echo "--- merged app manifest: $m"; grep -n -i -A3 "androidx-startup\|Initializer" "$m" || true
           if grep -q EmojiCompatInitializer "$m"; then echo "EmojiCompatInitializer is merged into the app"; exit 1; fi
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
       - name: Lint findings
         if: always()
         run: cat android/app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt 2>/dev/null || true
