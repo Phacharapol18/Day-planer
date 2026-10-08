@@ -137,13 +137,25 @@ let pagePid = '';
 /** (Re)attach to the app's WebView. A closed page means the WebView went away: say why we reconnect. */
 async function ensurePage() {
   if (page && !page.isClosed()) return;
-  const pid = sh(`pidof ${PKG} || true`).trim();
-  if (page) console.log(`  WebView page was closed; reconnecting (app pid ${pagePid} -> ${pid || 'none'})`);
-  if (!pid) sh(`am start -W -n ${PKG}/.MainActivity`);
-  const webview = await device.webView({ pkg: PKG, timeout: 60000 });
-  page = await webview.page();
-  page.setDefaultTimeout(15000);
-  pagePid = sh(`pidof ${PKG} || true`).trim();
+  // After a cold start the first WebView page target can be replaced once more while the app finishes
+  // loading, so attach until the app's own page is up and stays up.
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const pid = sh(`pidof ${PKG} || true`).trim();
+    if (page) console.log(`  WebView page was closed; reconnecting (app pid ${pagePid} -> ${pid || 'none'})`);
+    if (!pid) sh(`am start -W -n ${PKG}/.MainActivity`);
+    const webview = await device.webView({ pkg: PKG, timeout: 60000 });
+    page = await webview.page();
+    page.setDefaultTimeout(15000);
+    pagePid = sh(`pidof ${PKG} || true`).trim();
+    try {
+      await page.getByRole('heading', { level: 1 }).waitFor({ timeout: 20000 });
+      await sleep(1500);
+      if (!page.isClosed()) return;
+    } catch (e) {
+      if (!page.isClosed()) throw e;
+    }
+  }
+  throw new Error('could not attach to a stable app page');
 }
 
 await step('app boots to the timeline', async () => {
@@ -309,11 +321,21 @@ await step('no crashes, ANRs or Play services provider links for the app', async
   const ours = anrs.filter((l) => l.includes(`ANR in ${PKG}`));
   if (ours.length) throw new Error(`the app stopped responding: ${ours[0]}`);
   // A live link to Play services' font provider gets the app killed whenever Play services restarts.
-  const fonts = sh('dumpsys activity providers').split(/\n\s*\* ContentProviderRecord/).find((b) => b.includes('fonts.provider.FontsProvider')) || '';
-  const links = fonts.split('\n').filter((l) => /->\s+\d+:/.test(l)).map((l) => l.trim());
+  // Steady state: the WebView's first-render font fetch holds a stable link for a few seconds (more on a
+  // freshly restarted app), so give it up to 30s to settle before judging.
+  const fontLinks = () => {
+    const fonts = sh('dumpsys activity providers').split(/\n\s*\* ContentProviderRecord/).find((b) => b.includes('fonts.provider.FontsProvider')) || '';
+    return fonts.split('\n').filter((l) => /->\s+\d+:/.test(l)).map((l) => l.trim());
+  };
+  const stableOurs = (ls) => ls.some((l) => l.includes(`:${PKG}/`) && /\ss[1-9]/.test(l));
+  let links = fontLinks();
+  for (let waited = 0; stableOurs(links) && waited < 30000; waited += 2000) {
+    await sleep(2000);
+    links = fontLinks();
+  }
   console.log(`  Play services font provider connections: ${links.length ? links.join(' | ') : 'none'}`);
   // "sN/M uN/M": only a stable reference (s ≥ 1) gets the app killed when Play services dies.
-  if (links.some((l) => l.includes(`:${PKG}/`) && /\ss[1-9]/.test(l))) throw new Error('the app holds a stable link to Play services\' font provider in steady state');
+  if (stableOurs(links)) throw new Error('the app holds a stable link to Play services\' font provider in steady state');
   // And prove it end to end: restart Play services (as an update does) and the app must keep running.
   const gms = sh('pidof com.google.android.gms.persistent || true').trim();
   const app = sh(`pidof ${PKG} || true`).trim();
