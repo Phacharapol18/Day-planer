@@ -362,6 +362,8 @@ test.describe('mobile', () => {
     await block(page, 'Deep work').click();
     const editor = page.getByRole('dialog', { name: 'Edit task' });
     await expect(editor).toBeVisible();
+    // Measure once the sheet has finished sliding up.
+    await editor.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
     const save = (await page.getByTestId('editor-save').boundingBox())!;
     expect(save.y + save.height).toBeLessThanOrEqual(vh);
     expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('DIALOG');

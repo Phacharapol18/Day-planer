@@ -31,6 +31,8 @@ export interface WeekStats {
   bestStreak: number;
   highlightsHit: number;
   highlightsSet: number;
+  /** Today has a highlight that isn't done yet (neither hit nor missed). */
+  highlightPending: boolean;
 }
 
 const zero = (): Record<CategoryId, number> => ({ work: 0, health: 0, social: 0, errand: 0, meeting: 0, personal: 0 });
@@ -45,6 +47,7 @@ export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStar
   let hit = 0;
   let set = 0;
   let due = 0;
+  let pending = false;
   for (let i = 0; i < 7; i++) {
     const date = addDays(weekStart, i);
     const occ = occurrencesOn(data.tasks as Task[], date);
@@ -60,6 +63,7 @@ export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStar
       const gotDone = occ.some((o) => o.task.id === e.highlight && o.done);
       if (gotDone || date < today) set++;
       if (gotDone) hit++;
+      else if (date === today) pending = true;
     }
     days.push({
       date,
@@ -87,6 +91,7 @@ export function weekStats(data: Pick<PlannerData, 'tasks' | 'journal'>, weekStar
     bestStreak: bestStreak(data.journal),
     highlightsHit: hit,
     highlightsSet: set,
+    highlightPending: pending,
   };
 }
 

@@ -51,9 +51,9 @@ function InsightsBody() {
 
       <div className="ins-tiles">
         <Tile label="Time planned" value={formatDuration(stats.planned)} sub={`${stats.count} block${stats.count === 1 ? '' : 's'}`} />
-        <Tile label="Completed" value={stats.completion === null ? '—' : `${Math.round(stats.completion * 100)}%`} sub={stats.due ? `${stats.done} of ${stats.due} so far` : 'Nothing due yet'} />
+        <Tile label="Completed" value={stats.completion === null ? '—' : `${Math.round(stats.completion * 100)}%`} sub={stats.due ? `${stats.done} of ${stats.due}${stats.due < stats.count ? ' so far' : ''}` : 'Nothing due yet'} />
         <Tile label="Planning streak" value={`${stats.streak} ${stats.streak === 1 ? 'day' : 'days'}`} sub={`Best ${stats.bestStreak}`} />
-        <Tile label="Highlights hit" value={stats.highlightsSet ? `${stats.highlightsHit}/${stats.highlightsSet}` : '—'} sub={stats.highlightsSet ? 'Your one thing, done' : 'Pick one each morning'} />
+        <Tile label="Highlights hit" value={stats.highlightsSet ? `${stats.highlightsHit}/${stats.highlightsSet}` : '—'} sub={highlightSub(stats.highlightsSet, stats.highlightsHit, stats.highlightPending)} />
       </div>
 
       <div className={`ins-locked-wrap${isPro ? '' : ' is-locked'}`}>
@@ -127,6 +127,13 @@ function Tile({ label, value, sub }: { label: string; value: string; sub: string
   );
 }
 
+function highlightSub(set: number, hit: number, pending: boolean): string {
+  const today = pending ? 'today’s still open' : '';
+  if (!set) return today ? 'Today’s still open' : 'Pick one each morning';
+  const missed = set - hit;
+  return [missed ? `${missed} missed` : 'All done', today].filter(Boolean).join(' · ');
+}
+
 function WeekColumns({ days, today }: { days: DayStats[]; today: string }) {
   const max = Math.max(...days.map((d) => d.total), 1);
   const ticks = hourTicks(max);
@@ -177,10 +184,20 @@ function WeekColumns({ days, today }: { days: DayStats[]; today: string }) {
           </span>
         ))}
       </div>
-      {days.some((d) => d.ritual) && (
+      {(days.some((d) => d.ritual) || days.some((d) => d.date > today && d.total > 0)) && (
         <p className="ins-note">
-          <span className="ins-legend-ritual" aria-hidden="true" />
-          Planned or closed the day
+          {days.some((d) => d.ritual) && (
+            <>
+              <span className="ins-legend-ritual" aria-hidden="true" />
+              Planned or closed the day
+            </>
+          )}
+          {days.some((d) => d.date > today && d.total > 0) && (
+            <>
+              <span className="ins-legend-ahead" aria-hidden="true" />
+              Still ahead
+            </>
+          )}
         </p>
       )}
     </div>

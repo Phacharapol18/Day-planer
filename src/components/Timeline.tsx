@@ -61,7 +61,7 @@ export function Timeline() {
     const target = isToday ? (nowMin < dayStart ? dayStart - 60 : nowMin - 90) : Math.min(dayStart, occs[0]?.start ?? dayStart) - 30;
     // Snap to an hour so the top label is never cut in half (12px = .tl-grid's top margin).
     const snapped = Math.floor(target / 60) * 60;
-    el.scrollTop = Math.max(0, snapped * pxPerMin + 12 - 16);
+    el.scrollTop = Math.max(0, snapped * pxPerMin + 12 - 8);
   }, [selected, hourHeight]);
 
   const openNew = useCallback(
@@ -95,7 +95,7 @@ export function Timeline() {
         <div className="tl-grid" style={{ height: 24 * hourHeight }}>
           <div className="tl-gutter" aria-hidden="true">
             {HOURS.map((h) => (
-              <div key={h} className={`tl-hour-label${isToday && Math.abs(h * 60 - nowMin) * pxPerMin < 14 ? ' is-under-now' : ''}`} style={{ top: h * hourHeight }}>
+              <div key={h} className={`tl-hour-label${isToday && Math.abs(h * 60 - nowMin) * pxPerMin < 20 ? ' is-under-now' : ''}`} style={{ top: h * hourHeight }}>
                 {h === 0 ? '' : formatHourLabel(h, use24h)}
               </div>
             ))}

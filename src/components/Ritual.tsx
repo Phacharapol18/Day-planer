@@ -146,9 +146,9 @@ function PlanFlow() {
             {missed.map((t) =>
               dropped.has(t.id) ? (
                 <li key={t.id} className="rt-row" data-cat={t.category}>
-                  <span className="rt-dropped">
-                    Dropped “{t.title}” ·{' '}
-                    <button type="button" className="link" onClick={() => setDrop(t.id, false)}>
+                  <span className="rt-dropped">Dropped “{t.title}”</span>
+                  <span className="rt-actions">
+                    <button type="button" className="chip-btn" onClick={() => setDrop(t.id, false)}>
                       Undo
                     </button>
                   </span>

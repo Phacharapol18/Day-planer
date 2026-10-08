@@ -3,7 +3,7 @@ import { usePlanner } from '../state';
 import { useDrag } from '../drag';
 import { usePlanActions } from '../actions';
 import { type Task, type Priority, PRIORITY_LABEL, inboxTasks, missedTasks } from '../lib/model';
-import { formatDuration, formatTime, monthDay, shortDueLabel } from '../lib/time';
+import { diffDays, formatDuration, formatTime, monthDay, relativeDayName, shortDueLabel } from '../lib/time';
 import { Icon } from './Icon';
 import { usePro } from '../pro/ProProvider';
 
@@ -105,10 +105,18 @@ export function Inbox({ id }: { id?: string }) {
       </div>
       <p className="inbox-tip">
         <span className="tip-fine">
-          <kbd>Drag</kbd> a task onto the timeline, or <Icon name="calPlus" size={13} /> for the next free slot
+          Drag a task onto the timeline, or click{' '}
+          <span role="img" aria-label="the schedule button">
+            <Icon name="calPlus" size={13} />
+          </span>{' '}
+          for the next free slot
         </span>
         <span className="tip-coarse">
-          Long-press a task to drag it onto the timeline, or tap <Icon name="calPlus" size={13} /> for the next free slot
+          Long-press a task to drag it onto the timeline, or tap{' '}
+          <span role="img" aria-label="the schedule button">
+            <Icon name="calPlus" size={13} />
+          </span>{' '}
+          for the next free slot
         </span>
       </p>
     </aside>
@@ -145,7 +153,7 @@ function InboxItem({ task, missedOn, onOpen, onDone }: { task: Task; missedOn?: 
             onOpen();
           }
         }}
-        aria-label={`${task.title}. ${formatDuration(task.duration)}${task.due ? `. Due ${shortDueLabel(task.due, today)}` : ''}${task.priority > 0 ? `. ${PRIORITY_LABEL[task.priority as Priority]} priority` : ''}. Open details`}
+        aria-label={`${task.title}. ${formatDuration(task.duration)}${task.due ? `. ${spokenDue(task.due, today)}` : ''}${task.priority > 0 ? `. ${PRIORITY_LABEL[task.priority as Priority]} priority` : ''}. Open details`}
       >
         <span className="task-title">{task.title}</span>
         <span className="task-meta">
@@ -165,4 +173,11 @@ function InboxItem({ task, missedOn, onOpen, onDone }: { task: Task; missedOn?: 
       </button>
     </li>
   );
+}
+
+/** The due date as it should be read aloud (the chip uses abbreviations like "Tmrw"). */
+function spokenDue(due: string, today: string): string {
+  const diff = diffDays(due, today);
+  if (diff < 0) return `Overdue since ${monthDay(due)}`;
+  return `Due ${diff < 7 ? relativeDayName(due, today) : monthDay(due)}`;
 }

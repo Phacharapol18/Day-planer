@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { usePlanner } from '../state';
 import { occurrencesOn } from '../lib/model';
-import { mergeBusy } from '../lib/layout';
+import { mergeBusy, freeGaps } from '../lib/layout';
 import { addDays, diffDays, fromKey, monthDay, weekday, weekdayName, formatDuration, minutesNow, DAY_NAMES_SHORT, relativeDayName, SNAP } from '../lib/time';
 import { Icon } from './Icon';
 import { useCalendar } from '../calendar';
@@ -44,8 +44,8 @@ export function Header() {
     // Same origin as the timeline's free slots (now, rounded up to the 15-minute grid), so the numbers agree.
     const from = isToday ? Math.max(dayStart, Math.ceil(minutesNow(now) / SNAP) * SNAP) : dayStart;
     const events = eventsOn(selected);
-    const remainingBusy = mergeBusy([...occ, ...events]).reduce((s, b) => s + Math.max(0, Math.min(b.end, dayEnd) - Math.max(b.start, from)), 0);
-    const free = diffDays(selected, today) < 0 ? 0 : Math.max(0, dayEnd - from - remainingBusy);
+    // The same usable gaps (30 min or more) the timeline labels "Free", so the two always agree.
+    const free = diffDays(selected, today) < 0 ? 0 : freeGaps([...occ, ...events], from, dayEnd, 30).reduce((s, g) => s + (g.end - g.start), 0);
     return { total: occ.length, doneCount, planned, free, events: events.length, pct: occ.length ? Math.round((doneCount / occ.length) * 100) : 0 };
   }, [data.tasks, selected, today, now, dayStart, dayEnd, eventsOn]);
 

@@ -47,7 +47,8 @@ button:disabled {
 }
 
 kbd {
-  font: 500 11px/1 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font: 500 11px/1 var(--font-ui);
+  font-feature-settings: 'cv08';
   padding: 3px 5px;
   border-radius: 5px;
   border: 1px solid var(--line-strong);
@@ -576,7 +577,7 @@ a.btn {
   padding: 3px 5px;
   border-radius: 6px;
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--accent-ink);
   font: 650 11px/1.2 var(--font-ui);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -733,7 +734,6 @@ a.btn {
 .block-prio {
   margin-left: 4px;
   font-weight: 800;
-  color: var(--accent);
 }
 .block-notes {
   margin-top: 4px;
@@ -1154,15 +1154,9 @@ a.btn {
   letter-spacing: -0.05em;
 }
 .prio--3 {
-  color: var(--accent);
-}
-.prio--2 {
-  color: color-mix(in oklab, var(--accent) 65%, var(--muted));
-}
-.chip.prio--3 {
   color: var(--accent-strong);
 }
-.chip.prio--2 {
+.prio--2 {
   color: color-mix(in oklab, var(--accent-strong) 65%, var(--muted));
 }
 .prio--1 {
@@ -1251,10 +1245,10 @@ a.btn {
   padding: 4px 0;
 }
 .editor-title::placeholder {
-  color: var(--faint);
+  color: var(--muted);
 }
 .editor-title[aria-invalid='true']::placeholder {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 .field {
   display: grid;
@@ -1430,6 +1424,25 @@ fieldset.field > legend {
   display: flex;
   gap: 4px;
 }
+.editor-secondary {
+  flex-wrap: wrap;
+}
+@media (max-width: 1099px) {
+  .btn--primary kbd {
+    display: none; /* the shortcut stays in aria-keyshortcuts and Help */
+  }
+}
+@media (min-width: 900px) {
+  .dialog.editor .editor-foot {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 0 -22px -22px;
+    padding: 12px 22px;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+}
 .editor-primary {
   margin-left: auto;
 }
@@ -1604,10 +1617,16 @@ fieldset.field > legend {
   align-items: center;
   gap: 6px;
 }
-.qa-submit {
+.qa-keys {
   margin-left: auto;
 }
-@media (hover: none) {
+.qa-submit {
+  flex: none;
+}
+.qa-foot .toggle-inline {
+  min-width: 0;
+}
+@media (hover: none), (max-width: 520px) {
   .qa-keys {
     display: none;
   }
@@ -1720,7 +1739,7 @@ fieldset.field > legend {
   margin-top: 2px;
 }
 .settings-warn {
-  color: var(--accent);
+  color: var(--accent-strong);
   font-size: 12px;
   font-weight: 500;
 }
@@ -1792,7 +1811,7 @@ fieldset.field > legend {
   vertical-align: middle;
 }
 .go-pro {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 .go-pro:hover:not(:disabled) {
   background: var(--accent-soft);
@@ -1880,6 +1899,7 @@ button.pro-card:hover {
   padding-right: 28px;
   font: 600 28px/1.12 var(--font-display);
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 .pw-features {
   list-style: none;
@@ -1903,7 +1923,7 @@ button.pro-card:hover {
   text-wrap: pretty;
 }
 .pw-features li.is-focus strong {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 .pw-ficon {
   display: grid;
@@ -1959,7 +1979,7 @@ button.pro-card:hover {
   padding: 2px 6px;
   border-radius: 5px;
   background: var(--ok);
-  color: #fff;
+  color: var(--surface);
   font-size: 10.5px;
   font-weight: 700;
 }
@@ -2106,7 +2126,7 @@ button.pro-card:hover {
   flex: none;
 }
 .rt-row-title {
-  flex: 1 1 150px;
+  flex: 1 1 200px;
   min-width: 0;
   font-weight: 550;
   overflow-wrap: anywhere;
@@ -2142,6 +2162,8 @@ button.pro-card:hover {
   }
 }
 .rt-dropped {
+  flex: 1 1 150px;
+  min-width: 0;
   color: var(--muted);
   font-size: 13px;
 }
@@ -2598,7 +2620,16 @@ button.pro-card:hover {
   border: 1.5px solid var(--ink-2);
 }
 .ins-col-slot.is-future .ins-seg {
-  opacity: 0.45;
+  background: color-mix(in oklab, var(--fill) 30%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--fill);
+}
+.ins-legend-ahead {
+  display: inline-block;
+  width: 10px;
+  height: 8px;
+  margin: 0 6px 0 14px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1.5px var(--ink-2);
 }
 .ins-note {
   margin: 8px 0 0;
@@ -2733,7 +2764,7 @@ button.pro-card:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 470px;
+  min-height: min(430px, calc(100dvh - 96px));
   text-align: center;
   padding-top: 6px;
 }
@@ -2818,7 +2849,7 @@ button.pro-card:hover {
   top: -9px;
   padding: 1px 5px;
   border-radius: 5px;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-ink);
   font: 650 10px/1.4 var(--font-ui);
 }
@@ -2890,7 +2921,8 @@ button.pro-card:hover {
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin: 8px 0 2px;
+  margin: auto 0 2px;
+  padding-top: 8px;
 }
 .wl-dots span {
   width: 6px;
@@ -2908,7 +2940,6 @@ button.pro-card:hover {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  margin-top: auto;
   padding-top: 6px;
 }
 .wl-foot--final {
@@ -2946,9 +2977,9 @@ button.pro-card:hover {
 }
 @media (min-width: 768px) {
   .help-grid {
-    grid-template-columns: repeat(3, auto);
+    grid-template-columns: auto auto minmax(0, 1fr);
   }
-  .help-row dd {
+  .help-grid section:not(:last-child) .help-row dd {
     white-space: nowrap;
   }
 }
@@ -3239,6 +3270,10 @@ button.pro-card:hover {
   .now-line {
     right: -4px;
   }
+  .now-pill {
+    padding: 3px 3px;
+    letter-spacing: -0.01em;
+  }
   .inbox {
     position: fixed;
     inset: auto 0 0 0;
@@ -3364,18 +3399,29 @@ button.pro-card:hover {
     background: var(--surface);
     border-top: 1px solid var(--line);
   }
-  /* B7: duration chips fit one row */
-  .chip-btn {
-    padding: 0 9px;
+  /* Duration: an even 4-column grid (7 options never fit one phone row; no lone "Custom") */
+  .chips--duration {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .chips--duration .chip-input {
+    min-width: 0;
   }
   /* B1: touch targets toward 48dp without moving the layout */
   :where(.icon-btn, .seg button, .chip-btn, .btn--sm) {
     position: relative; /* zero specificity: absolutely positioned buttons keep their position */
   }
+  /* Grow vertically by 6px; horizontally only by less than half the gap to a neighbour. */
   :where(.icon-btn, .seg button, .chip-btn, .btn--sm)::after {
     content: '';
     position: absolute;
-    inset: -6px;
+    inset: -6px -2px;
+  }
+  .seg button::after {
+    inset: -6px -1px;
+  }
+  .steps-edit .icon-btn::after {
+    inset: -2px -6px;
   }
   .seg button {
     height: 34px;

@@ -32,6 +32,9 @@ describe.each([
   });
 });
 
-it('white on the now-pill fill (accent-strong, light) is AA', () => {
-  expect(ratio('#ffffff', light['accent-strong'])).toBeGreaterThanOrEqual(4.5);
+it.each([
+  ['light', light],
+  ['dark', dark],
+])('%s: now-pill text (accent-ink) on its fill (accent-strong) is AA', (_, t) => {
+  expect(ratio(t['accent-ink'], t['accent-strong'])).toBeGreaterThanOrEqual(4.5);
 });

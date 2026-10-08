@@ -164,7 +164,7 @@ function EditorForm({ source, isNew, occurrenceDate }: { source: Task; isNew: bo
 
       <fieldset className="field">
         <legend className="field-label">Duration</legend>
-        <div className="chips">
+        <div className="chips chips--duration">
           {DURATIONS.map((d) => (
             <button
               type="button"

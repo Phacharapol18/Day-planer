@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { usePlanner } from '../state';
 import { usePlanActions } from '../actions';
 import { parseQuickAdd } from '../lib/parse';
@@ -29,6 +29,7 @@ function QuickAddForm() {
   const items = useMemo(() => splitBrainDump(text), [text]);
   const multi = items.length > 1;
   const [listening, setListening] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { use24h } = data.settings;
   const scheduled = p.start !== null;
 
@@ -56,6 +57,7 @@ function QuickAddForm() {
       toast(`Added ${added.length} tasks${timed ? ` · ${timed} on the timeline` : ''}`, { action: { label: 'Undo', run: () => added.forEach(() => undo()) } });
       setText('');
       if (!stay && !keepOpen) setPanel(null);
+      else inputRef.current?.focus();
       return;
     }
     const task = addFromText(text);
@@ -66,6 +68,7 @@ function QuickAddForm() {
     });
     setText('');
     if (!stay && !keepOpen) setPanel(null);
+    else inputRef.current?.focus(); // keep the keyboard up for the next one
   };
 
   return (
@@ -79,6 +82,7 @@ function QuickAddForm() {
       <div className="qa-input-row">
         <Icon name="plus" size={20} className="qa-icon" />
         <textarea
+          ref={inputRef}
           data-autofocus
           rows={1}
           className="qa-input"
@@ -177,7 +181,15 @@ function QuickAddForm() {
         <span className="qa-keys">
           <kbd>↵</kbd> add <kbd>⇧↵</kbd> another <kbd>esc</kbd> close
         </span>
-        <button type="submit" className="btn btn--primary btn--sm qa-submit" disabled={!text.trim()} data-testid="quickadd-submit">
+        <button
+          type="submit"
+          className="btn btn--primary btn--sm qa-submit"
+          disabled={!text.trim()}
+          data-testid="quickadd-submit"
+          // Don't take focus from the input: on a phone that would close the keyboard after every add.
+          onPointerDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {multi ? `Add ${items.length}` : 'Add'}
         </button>
       </div>
