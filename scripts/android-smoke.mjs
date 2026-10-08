@@ -275,7 +275,7 @@ await step(
   },
 );
 
-await step('no crashes or ANRs for the app', async () => {
+await step('no crashes, ANRs or Play services provider links for the app', async () => {
   const log = adb('logcat', '-d', '-b', 'crash');
   if (log.includes(PKG)) {
     writeFileSync(`${OUT}/crash.txt`, log);
@@ -288,6 +288,23 @@ await step('no crashes or ANRs for the app', async () => {
   console.log(`  device health: ${daveys.length} frames >=1s (max ${Math.max(0, ...daveys)}ms); ANRs: ${anrs.length ? anrs.join(' | ') : 'none'}`);
   const ours = anrs.filter((l) => l.includes(`ANR in ${PKG}`));
   if (ours.length) throw new Error(`the app stopped responding: ${ours[0]}`);
+  // A live link to Play services' font provider gets the app killed whenever Play services restarts.
+  const fonts = sh('dumpsys activity providers').split(/\n\s*\* ContentProviderRecord/).find((b) => b.includes('fonts.provider.FontsProvider')) || '';
+  const links = fonts.split('\n').filter((l) => /->\s+\d+:/.test(l)).map((l) => l.trim());
+  console.log(`  Play services font provider connections: ${links.length ? links.join(' | ') : 'none'}`);
+  if (links.some((l) => l.includes(`:${PKG}/`))) throw new Error('the app holds a connection to Play services\' font provider');
+  // And prove it end to end: restart Play services (as an update does) and the app must keep running.
+  const gms = sh('pidof com.google.android.gms.persistent || true').trim();
+  const app = sh(`pidof ${PKG} || true`).trim();
+  if (!gms || !app || !sh('command -v su || true').trim()) {
+    console.log(`  Play services restart check skipped (gms=${gms || 'none'} app=${app || 'none'})`);
+    return;
+  }
+  sh(`su 0 kill -9 ${gms}`);
+  await sleep(3000);
+  const after = sh(`pidof ${PKG} || true`).trim();
+  console.log(`  killed Play services (pid ${gms}); app pid ${app} -> ${after || 'none'}`);
+  if (after !== app) throw new Error('the app was killed when Play services restarted');
 });
 
 writeFileSync(`${OUT}/04-final.png`, await device.screenshot());
