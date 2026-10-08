@@ -292,6 +292,8 @@ await step('no crashes, ANRs or Play services provider links for the app', async
   const fonts = sh('dumpsys activity providers').split(/\n\s*\* ContentProviderRecord/).find((b) => b.includes('fonts.provider.FontsProvider')) || '';
   const links = fonts.split('\n').filter((l) => /->\s+\d+:/.test(l)).map((l) => l.trim());
   console.log(`  Play services font provider connections: ${links.length ? links.join(' | ') : 'none'}`);
+  const fontLog = main.filter((l) => /FontLog|EmojiCompat|Noto Color Emoji/.test(l)).slice(-8);
+  console.log(`  font provider activity:\n    ${fontLog.length ? fontLog.join('\n    ') : '(none)'}`);
   if (links.some((l) => l.includes(`:${PKG}/`))) throw new Error('the app holds a connection to Play services\' font provider');
   // And prove it end to end: restart Play services (as an update does) and the app must keep running.
   const gms = sh('pidof com.google.android.gms.persistent || true').trim();
