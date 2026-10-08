@@ -77,6 +77,8 @@ Unlock Auto-plan, your phone's calendars, widgets, the live Now card, unlimited 
 
 The order of screenshots 1–6 is the order to upload them. The first two do most of the converting.
 
+Native Android captures from the CI emulator (Now card in the shade, widgets in light/dark/locked) are in [`docs/store/android/`](store/android/). For a full design review of every screen and state (phone light/dark + desktop), run `npm run build && npm run preview`, then `PW_CHROMIUM_PATH=… npm run tour` (writes `screen-tour/`).
+
 ## 4. Subscriptions (Monetize → Products → Subscriptions)
 
 Create **one** subscription. The IDs must match the code (`src/pro/entitlement.ts`):
