@@ -113,6 +113,12 @@ sh(`pm grant ${PKG} android.permission.READ_CALENDAR`);
 // and its "isn't responding" dialog later takes window focus and Back presses. Don't let system error
 // dialogs cover the app (as CTS does). The app's own ANRs still fail the run via logcat (last step).
 sh('settings put global hide_error_dialogs 1');
+for (const w of new Set(sh('dumpsys window windows').match(/Application Not Responding: [\w.]+/g) || [])) {
+  const other = w.replace('Application Not Responding: ', '');
+  if (other === 'android' || other === PKG) continue;
+  console.log(`  before launch: ${other} left "${w}" from boot; stopping it`);
+  sh(`am force-stop ${other}`);
+}
 sh('logcat -c');
 sh(`am start -W -n ${PKG}/.MainActivity`);
 
@@ -120,16 +126,30 @@ const [device] = await android.devices();
 if (!device) throw new Error('no adb device');
 
 const focus = () => (sh('dumpsys window').match(/mCurrentFocus=Window\{\S+ \S+ ([^}]+)\}/) || [])[1] || '?';
+const topActivity = () => (sh('dumpsys activity activities').match(/topResumedActivity=\S+ \S+ (\S+)/) || [])[1] || '?';
 const anrDialogs = () => sh('dumpsys window windows').match(/Application Not Responding: [\w.]+/g) || [];
-/** Steps drive the app through its window: make sure it has focus, clearing other apps' ANR dialogs. */
+/**
+ * Steps drive the app through its window: make sure it has focus. A launcher that ANR'd on the
+ * emulator's boot-time MENU press can keep window focus even after the app is the top activity, and its
+ * dialog's "Wait" can't be tapped while the device is busy. Stopping that other app clears both.
+ */
 async function ensureAppFocused(why) {
   for (const w of new Set(anrDialogs())) {
-    if (w.endsWith(PKG)) throw new Error(`the app is not responding (${w})`);
-    console.log(`  ${why}: dismissing a dialog left by another app: "${w}"`);
-    await device.tap({ text: 'Wait' }, { timeout: 15000 }).catch((e) => console.log(`  could not tap Wait: ${String(e.message).split('\n')[0]}`));
+    const other = w.replace('Application Not Responding: ', '');
+    if (other === PKG) throw new Error(`the app is not responding (${w})`);
+    if (other === 'android') continue;
+    console.log(`  ${why}: another app left "${w}"; stopping ${other} to clear it`);
+    sh(`am force-stop ${other}`);
+  }
+  const f = focus();
+  const other = f.includes('/') ? f.split('/')[0] : '';
+  if (other && other !== PKG && other !== 'com.android.systemui' && topActivity().startsWith(`${PKG}/`)) {
+    console.log(`  ${why}: ${other} kept window focus though the app is on top; stopping it`);
+    sh(`am force-stop ${other}`);
+    sh(`am start -n ${PKG}/.MainActivity`);
   }
   await waitFor(async () => focus().includes(`${PKG}/`), 'app window focused', 15000).catch((e) => {
-    throw new Error(`${e.message} (focus=${focus()})`);
+    throw new Error(`${e.message} (focus=${focus()} top=${topActivity()})`);
   });
 }
 let page;
